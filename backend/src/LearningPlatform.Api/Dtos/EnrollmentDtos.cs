@@ -12,6 +12,8 @@ public record LessonProgressDto(int LessonId, bool Completed);
 
 public record LessonContentDto(int Id, int OrderNumber, string Title, string Content);
 
+public record MyReviewDto(int Id, int Grade, string Comment, DateTime CreatedAt);
+
 public record EnrollmentDetailDto(
     int Id,
     int CourseId,
@@ -20,7 +22,7 @@ public record EnrollmentDetailDto(
     DateTime EnrolledAt,
     List<LessonSummaryDto> Lessons,
     List<int> CompletedLessonIds,
-    bool HasReview);
+    MyReviewDto? MyReview);
 
 public record EnrollResultDto(int EnrollmentId, int? FirstLessonId);
 

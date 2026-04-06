@@ -1,155 +1,175 @@
-import { Play, Clock, Award, CheckCircle, BarChart } from 'lucide-react';
-import { BookOpen, FileText } from 'lucide-react';
+import { Award, CheckCircle, BarChart, BookOpen, FileText } from 'lucide-react'
+import { useNavigate, useParams } from 'react-router'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { api } from '../../lib/api'
 
 export function CourseDetails() {
-  const lessons = [
-    'Lesson 1: Introduction to Advanced Concepts',
-    'Lesson 2: Closures and Scope',
-    'Lesson 3: Async/Await and Promises',
-    'Lesson 4: ES6+ Features',
-  ];
+  const { id } = useParams<{ id: string }>()
+  const courseId = Number(id)
+  const nav = useNavigate()
+  const qc = useQueryClient()
 
-  const reviews = [
-    {
-      id: 1,
-      author: 'John Doe',
-      date: '5 days ago',
-      text: 'This course was excellent! I learned so much about JavaScript and the instructor explained everything clearly. Highly recommend to anyone looking to improve their skills.',
+  const course = useQuery({
+    queryKey: ['course', courseId],
+    queryFn: () => api.getCourse(courseId),
+    enabled: Number.isFinite(courseId),
+  })
+
+  const enrollments = useQuery({
+    queryKey: ['enrollments'],
+    queryFn: api.listMyEnrollments,
+  })
+
+  const existingEnrollment = enrollments.data?.find((e) => e.courseId === courseId)
+
+  const enroll = useMutation({
+    mutationFn: () => api.enroll(courseId),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['enrollments'] })
+      qc.invalidateQueries({ queryKey: ['course', courseId] })
+      if (res.firstLessonId != null) {
+        nav(`/learn/${res.enrollmentId}/${res.firstLessonId}`)
+      }
     },
-    {
-      id: 2,
-      author: 'Jane Smith',
-      date: '2 weeks ago',
-      text: 'Great content and well-structured lessons. The examples were practical and easy to follow. Would definitely take more courses from this instructor.',
-    },
-  ];
+  })
+
+  if (course.isPending || enrollments.isPending) {
+    return <div className="p-8 text-gray-600">Loading…</div>
+  }
+  if (course.error) {
+    return <div className="p-8 text-red-700">Failed: {(course.error as Error).message}</div>
+  }
+  if (!course.data) return null
+
+  const c = course.data
+
+  function handleContinue() {
+    if (!existingEnrollment) return
+    if (existingEnrollment.nextLessonId != null) {
+      nav(`/learn/${existingEnrollment.id}/${existingEnrollment.nextLessonId}`)
+    } else if (c.lessons.length > 0) {
+      nav(`/learn/${existingEnrollment.id}/${c.lessons[0].id}`)
+    }
+  }
 
   return (
     <div className="p-8">
       <div className="flex gap-8">
-        {/* Left Column - 70% */}
+        {/* Left Column */}
         <div className="flex-[7]">
-          {/* Course Title */}
-          <h1 className="mb-4 text-3xl font-bold text-gray-900">Advanced JavaScript Concepts</h1>
-          
-          {/* Categories */}
-          <div className="flex items-center gap-2 mb-6">
+          <h1 className="mb-4 text-3xl font-bold text-gray-900">{c.title}</h1>
+
+          <div className="flex items-center gap-2 mb-6 flex-wrap">
             <span className="text-sm text-gray-600">Categories:</span>
-            <span className="px-3 py-1 border-2 border-gray-400 bg-gray-100 text-gray-900 text-sm">
-              Programming
-            </span>
-            <span className="px-3 py-1 border-2 border-gray-400 bg-gray-100 text-gray-900 text-sm">
-              JavaScript
-            </span>
-            <span className="px-3 py-1 border-2 border-gray-400 bg-gray-100 text-gray-900 text-sm">
-              Web Development
-            </span>
-          </div>
-          
-          {/* Text-based Lesson Preview */}
-          <div className="w-full border-2 border-gray-800 bg-white p-8 mb-8">
-            <div className="text-center mb-4">
-              <FileText className="w-16 h-16 text-gray-500 mx-auto mb-2" />
-              <span className="text-gray-500 text-lg">[Text-based Lesson Preview]</span>
-            </div>
-            <div className="text-gray-700 leading-relaxed">
-              <p className="mb-3">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor 
-                incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud 
-                exercitation ullamco laboris.
-              </p>
-              <p>
-                Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu 
-                fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident.
-              </p>
-            </div>
+            {c.categories.map((cat) => (
+              <span
+                key={cat.id}
+                className="px-3 py-1 border-2 border-gray-400 bg-gray-100 text-gray-900 text-sm"
+              >
+                {cat.name}
+              </span>
+            ))}
           </div>
 
-          {/* Description */}
           <section className="mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Description</h2>
             <div className="border-2 border-gray-400 bg-white p-6">
-              <p className="text-gray-700 mb-3">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor 
-                incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud 
-                exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-              </p>
-              <p className="text-gray-700 mb-3">
-                Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu 
-                fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa 
-                qui officia deserunt mollit anim id est laborum.
-              </p>
-              <p className="text-gray-700">
-                Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque 
-                laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis.
-              </p>
+              <p className="text-gray-700 whitespace-pre-wrap">{c.description}</p>
             </div>
           </section>
 
-          {/* Curriculum */}
           <section className="mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Curriculum</h2>
             <div className="border-2 border-gray-800 bg-white">
-              {lessons.map((lesson, index) => (
+              {c.lessons.map((lesson, index) => (
                 <div
-                  key={index}
-                  className={`p-4 hover:bg-gray-100 transition-colors ${
-                    index < lessons.length - 1 ? 'border-b-2 border-gray-400' : ''
+                  key={lesson.id}
+                  className={`p-4 ${
+                    index < c.lessons.length - 1 ? 'border-b-2 border-gray-400' : ''
                   }`}
                 >
-                  <span className="text-gray-900">{lesson}</span>
+                  <span className="text-gray-900">{lesson.title}</span>
                 </div>
               ))}
+              {c.lessons.length === 0 && (
+                <div className="p-4 text-gray-500">No lessons published yet.</div>
+              )}
             </div>
           </section>
 
-          {/* Student Reviews */}
           <section>
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Student Reviews</h2>
-            <div className="space-y-4">
-              {reviews.map((review) => (
-                <div key={review.id} className="border-2 border-gray-400 bg-white p-6">
-                  <div className="mb-2">
-                    <span className="font-bold text-gray-900">{review.author}</span>
-                    <span className="text-gray-600 text-sm ml-2">- {review.date}</span>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              Student Reviews{' '}
+              <span className="text-sm font-normal text-gray-600">
+                ({c.reviews.length} · avg {c.averageRating.toFixed(1)})
+              </span>
+            </h2>
+            {c.reviews.length === 0 ? (
+              <div className="border-2 border-gray-400 bg-white p-6 text-gray-600">
+                No reviews yet.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {c.reviews.map((r) => (
+                  <div key={r.id} className="border-2 border-gray-400 bg-white p-6">
+                    <div className="mb-2">
+                      <span className="font-bold text-gray-900">
+                        {r.studentFirstName} {r.studentLastName}
+                      </span>
+                      <span className="text-gray-600 text-sm ml-2">
+                        — {new Date(r.createdAt).toISOString().slice(0, 10)} · {'★'.repeat(r.grade)}
+                      </span>
+                    </div>
+                    <p className="text-gray-700 whitespace-pre-wrap">{r.comment}</p>
                   </div>
-                  <p className="text-gray-700">{review.text}</p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
         </div>
 
-        {/* Right Column - 30% */}
+        {/* Right Column */}
         <div className="flex-[3]">
           <div className="sticky top-8 border-2 border-gray-800 bg-white p-6">
-            {/* Price */}
             <div className="text-center mb-6">
-              <div className="text-4xl font-bold text-gray-900 mb-2">$79.99</div>
+              <div className="text-4xl font-bold text-gray-900 mb-2">${c.price.toFixed(2)}</div>
             </div>
 
-            {/* Course Stats */}
             <div className="mb-6 space-y-3">
               <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-gray-700" />
-                <span className="text-gray-700">Duration: 8 hours</span>
-              </div>
-              <div className="flex items-center gap-3">
                 <BarChart className="w-5 h-5 text-gray-700" />
-                <span className="text-gray-700">Level: Intermediate</span>
+                <span className="text-gray-700">Level: {c.level}</span>
               </div>
               <div className="flex items-center gap-3">
                 <BookOpen className="w-5 h-5 text-gray-700" />
+                <span className="text-gray-700">{c.lessons.length} lessons</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-gray-700" />
                 <span className="text-gray-700">Format: Text-based</span>
               </div>
             </div>
 
-            {/* Pay & Enroll Button */}
-            <button className="w-full py-4 mb-6 border-2 border-gray-800 bg-gray-900 text-white text-lg font-bold hover:bg-gray-700 transition-colors">
-              Pay & Enroll
-            </button>
+            {existingEnrollment ? (
+              <button
+                onClick={handleContinue}
+                className="w-full py-4 mb-6 border-2 border-gray-800 bg-gray-900 text-white text-lg font-bold hover:bg-gray-700 transition-colors"
+              >
+                Continue Learning ({existingEnrollment.progress}%)
+              </button>
+            ) : (
+              <button
+                onClick={() => enroll.mutate()}
+                disabled={enroll.isPending}
+                className="w-full py-4 mb-6 border-2 border-gray-800 bg-gray-900 text-white text-lg font-bold hover:bg-gray-700 transition-colors disabled:opacity-50"
+              >
+                {enroll.isPending ? 'Enrolling…' : 'Pay & Enroll'}
+              </button>
+            )}
+            {enroll.error && (
+              <p className="mb-4 text-sm text-red-700">{(enroll.error as Error).message}</p>
+            )}
 
-            {/* Additional Info */}
             <div className="border-t-2 border-gray-400 pt-6">
               <h3 className="font-bold text-gray-900 mb-4">This course includes:</h3>
               <ul className="space-y-3">
@@ -161,15 +181,11 @@ export function CourseDetails() {
                   <CheckCircle className="w-5 h-5 text-gray-700" />
                   <span className="text-gray-700">Lifetime access</span>
                 </li>
-                <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-gray-700" />
-                  <span className="text-gray-700">30-day money back</span>
-                </li>
               </ul>
             </div>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -65,10 +65,17 @@ export function Layout() {
 
   const navItems = navItemsForRole(user.role)
   const portalTitle = portalTitleForRole(user.role)
+  const [searchValue, setSearchValue] = useState('')
 
   async function handleLogout() {
     await logout()
     navigate('/login', { replace: true })
+  }
+
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmed = searchValue.trim()
+    navigate(trimmed ? `/catalog?q=${encodeURIComponent(trimmed)}` : '/catalog')
   }
 
   return (
@@ -108,14 +115,16 @@ export function Layout() {
         <header className="border-b-2 border-gray-800 bg-gray-100 p-4">
           <div className="flex items-center gap-4">
             {user.role !== 'Admin' && (
-              <div className="flex-1 relative">
+              <form onSubmit={handleSearchSubmit} className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
                   type="text"
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
                   placeholder="Search courses..."
                   className="w-full pl-10 pr-4 py-2 border-2 border-gray-800 bg-white"
                 />
-              </div>
+              </form>
             )}
             {user.role === 'Admin' && <div className="flex-1" />}
 

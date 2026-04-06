@@ -1,88 +1,239 @@
-import { ChevronDown, Star } from 'lucide-react';
-import { Link } from 'react-router';
+import { ChevronDown, Star } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router'
+import { useQuery } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
+import { api, type CourseQuery } from '../../lib/api'
+
+type SortKey = NonNullable<CourseQuery['sort']>
+
+const sortLabels: Record<SortKey, string> = {
+  newest: 'Newest',
+  oldest: 'Oldest',
+  price_asc: 'Price ↑',
+  price_desc: 'Price ↓',
+  rating_desc: 'Rating',
+}
+
+function renderStars(rating: number) {
+  const stars = []
+  for (let i = 1; i <= 5; i++) {
+    stars.push(
+      <Star
+        key={i}
+        className={`w-4 h-4 ${
+          i <= Math.round(rating)
+            ? 'fill-gray-900 text-gray-900'
+            : 'fill-gray-400 text-gray-400'
+        }`}
+      />,
+    )
+  }
+  return stars
+}
 
 export function Catalog() {
-  const courses = [
-    { id: 1, title: 'Introduction to Web Development', rating: 4.0, price: '$49.99', published: '2026-02-15' },
-    { id: 2, title: 'Advanced JavaScript Concepts', rating: 5.0, price: '$79.99', published: '2026-03-10' },
-    { id: 3, title: 'UI/UX Design Fundamentals', rating: 4.5, price: '$59.99', published: '2026-01-20' },
-    { id: 4, title: 'Python for Data Science', rating: 4.2, price: '$89.99', published: '2026-02-28' },
-    { id: 5, title: 'Mobile App Development', rating: 4.8, price: '$69.99', published: '2026-03-05' },
-    { id: 6, title: 'Database Management Systems', rating: 3.5, price: '$54.99', published: '2026-01-12' },
-  ];
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const renderStars = (rating: number) => {
-    const stars = [];
-    for (let i = 1; i <= 5; i++) {
-      stars.push(
-        <Star
-          key={i}
-          className={`w-4 h-4 ${
-            i <= Math.floor(rating)
-              ? 'fill-gray-900 text-gray-900'
-              : 'fill-gray-400 text-gray-400'
-          }`}
-        />
-      );
+  // URL is the source of truth for filters
+  const q = searchParams.get('q') ?? ''
+  const sort = (searchParams.get('sort') as SortKey | null) ?? 'newest'
+  const minPrice = searchParams.get('minPrice')
+  const maxPrice = searchParams.get('maxPrice')
+  const minRating = searchParams.get('minRating')
+  const categoryIds = searchParams.getAll('categoryIds').map(Number)
+
+  const query: CourseQuery = useMemo(
+    () => ({
+      q: q || undefined,
+      sort,
+      minPrice: minPrice ? Number(minPrice) : undefined,
+      maxPrice: maxPrice ? Number(maxPrice) : undefined,
+      minRating: minRating ? Number(minRating) : undefined,
+      categoryIds: categoryIds.length ? categoryIds : undefined,
+    }),
+    [q, sort, minPrice, maxPrice, minRating, categoryIds.join(',')],
+  )
+
+  const courses = useQuery({
+    queryKey: ['courses', query],
+    queryFn: () => api.listCourses(query),
+  })
+  const categories = useQuery({
+    queryKey: ['categories'],
+    queryFn: api.listCategories,
+  })
+
+  const [showFilters, setShowFilters] = useState(false)
+
+  function patchParams(patch: Record<string, string | string[] | null>) {
+    const next = new URLSearchParams(searchParams)
+    for (const [k, v] of Object.entries(patch)) {
+      next.delete(k)
+      if (v == null) continue
+      if (Array.isArray(v)) for (const x of v) next.append(k, x)
+      else if (v !== '') next.set(k, v)
     }
-    return stars;
-  };
+    setSearchParams(next, { replace: true })
+  }
+
+  function toggleCategory(id: number) {
+    const next = new Set(categoryIds)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    patchParams({ categoryIds: Array.from(next).map(String) })
+  }
 
   return (
     <div>
       {/* Filter Bar */}
       <div className="border-b-2 border-gray-800 bg-gray-100 p-4">
-        <div className="flex items-center gap-4">
-          <button className="flex items-center gap-2 px-4 py-2 border-2 border-gray-800 bg-white hover:bg-gray-200 transition-colors">
-            <span>Category</span>
+        <div className="flex items-center gap-4 flex-wrap">
+          <button
+            onClick={() => setShowFilters((v) => !v)}
+            className="flex items-center gap-2 px-4 py-2 border-2 border-gray-800 bg-white hover:bg-gray-200 transition-colors"
+          >
+            <span>Filters</span>
             <ChevronDown className="w-4 h-4" />
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 border-2 border-gray-800 bg-white hover:bg-gray-200 transition-colors">
-            <span>Rating</span>
-            <ChevronDown className="w-4 h-4" />
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 border-2 border-gray-800 bg-white hover:bg-gray-200 transition-colors">
-            <span>Price</span>
-            <ChevronDown className="w-4 h-4" />
-          </button>
+
+          {q && (
+            <div className="px-3 py-2 border-2 border-gray-400 bg-white text-sm">
+              Search: <span className="font-bold">"{q}"</span>{' '}
+              <button
+                onClick={() => patchParams({ q: null })}
+                className="ml-2 text-gray-600 hover:text-gray-900"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
           <div className="ml-auto flex items-center gap-2">
             <span className="text-gray-700">Sort by:</span>
-            <button className="flex items-center gap-2 px-4 py-2 border-2 border-gray-800 bg-white hover:bg-gray-200 transition-colors">
-              <span>Relevance</span>
-              <ChevronDown className="w-4 h-4" />
-            </button>
+            <select
+              value={sort}
+              onChange={(e) => patchParams({ sort: e.target.value })}
+              className="px-4 py-2 border-2 border-gray-800 bg-white"
+            >
+              {(Object.keys(sortLabels) as SortKey[]).map((k) => (
+                <option key={k} value={k}>
+                  {sortLabels[k]}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
+
+        {showFilters && (
+          <div className="mt-4 grid grid-cols-3 gap-6 border-t-2 border-gray-400 pt-4">
+            <div>
+              <div className="text-sm font-bold text-gray-900 mb-2">Categories</div>
+              <div className="flex flex-wrap gap-2">
+                {categories.data?.map((c) => {
+                  const active = categoryIds.includes(c.id)
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => toggleCategory(c.id)}
+                      className={`px-3 py-1 border-2 text-sm transition-colors ${
+                        active
+                          ? 'border-gray-800 bg-gray-900 text-white'
+                          : 'border-gray-400 bg-white text-gray-900 hover:bg-gray-200'
+                      }`}
+                    >
+                      {c.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-bold text-gray-900 mb-2">Price ($)</div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Min"
+                  value={minPrice ?? ''}
+                  onChange={(e) => patchParams({ minPrice: e.target.value || null })}
+                  className="w-24 px-2 py-1 border-2 border-gray-800 bg-white"
+                />
+                <span>—</span>
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="Max"
+                  value={maxPrice ?? ''}
+                  onChange={(e) => patchParams({ maxPrice: e.target.value || null })}
+                  className="w-24 px-2 py-1 border-2 border-gray-800 bg-white"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-bold text-gray-900 mb-2">Min rating</div>
+              <select
+                value={minRating ?? ''}
+                onChange={(e) => patchParams({ minRating: e.target.value || null })}
+                className="px-3 py-1 border-2 border-gray-800 bg-white"
+              >
+                <option value="">Any</option>
+                <option value="1">★ 1+</option>
+                <option value="2">★ 2+</option>
+                <option value="3">★ 3+</option>
+                <option value="4">★ 4+</option>
+                <option value="5">★ 5</option>
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Content */}
       <div className="p-8">
         <h1 className="mb-6 text-2xl font-bold text-gray-900">Course Catalog</h1>
-        
-        {/* Course Grid */}
-        <div className="grid grid-cols-3 gap-6">
-          {courses.map((course) => (
-            <div key={course.id} className="border-2 border-gray-800 bg-white p-4">
-              <div className="w-full h-40 border-2 border-gray-400 bg-gray-200 flex items-center justify-center mb-4">
-                <span className="text-gray-500 text-sm">[Image Placeholder]</span>
+
+        {courses.isPending && <p className="text-gray-600">Loading…</p>}
+        {courses.error && (
+          <p className="text-red-700">Failed to load courses: {(courses.error as Error).message}</p>
+        )}
+        {courses.data && courses.data.length === 0 && (
+          <p className="text-gray-600">No courses match your filters.</p>
+        )}
+
+        {courses.data && courses.data.length > 0 && (
+          <div className="grid grid-cols-3 gap-6">
+            {courses.data.map((course) => (
+              <div key={course.id} className="border-2 border-gray-800 bg-white p-4 flex flex-col">
+                <div className="w-full h-40 border-2 border-gray-400 bg-gray-200 flex items-center justify-center mb-4">
+                  <span className="text-gray-500 text-sm">[Image Placeholder]</span>
+                </div>
+                <h3 className="font-bold text-gray-900 mb-2">{course.title}</h3>
+                <div className="flex items-center gap-1 mb-2">
+                  {renderStars(course.averageRating)}
+                  <span className="ml-1 text-sm text-gray-600">
+                    ({course.averageRating.toFixed(1)}) · {course.reviewCount}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 mb-1">
+                  By {course.author.firstName} {course.author.lastName}
+                </p>
+                <p className="text-sm text-gray-600 mb-2">
+                  Published: {new Date(course.createdAt).toISOString().slice(0, 10)}
+                </p>
+                <p className="font-bold text-gray-900 mb-4">${course.price.toFixed(2)}</p>
+                <Link
+                  to={`/courses/${course.id}`}
+                  className="block w-full mt-auto py-2 text-center border-2 border-gray-800 bg-gray-900 text-white hover:bg-gray-700 transition-colors"
+                >
+                  Details
+                </Link>
               </div>
-              <h3 className="font-bold text-gray-900 mb-2">{course.title}</h3>
-              <div className="flex items-center gap-1 mb-2">
-                {renderStars(course.rating)}
-                <span className="ml-1 text-sm text-gray-600">({course.rating})</span>
-              </div>
-              <p className="text-sm text-gray-600 mb-2">Published: {course.published}</p>
-              <p className="font-bold text-gray-900 mb-4">{course.price}</p>
-              <Link
-                to="/course-details"
-                className="block w-full py-2 text-center border-2 border-gray-800 bg-gray-900 text-white hover:bg-gray-700 transition-colors"
-              >
-                Details
-              </Link>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
-  );
+  )
 }

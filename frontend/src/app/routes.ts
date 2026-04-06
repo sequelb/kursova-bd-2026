@@ -18,6 +18,13 @@ import { FinancialControls } from './pages/admin/FinancialControls'
 import { TeacherPayouts } from './pages/admin/TeacherPayouts'
 import { UserManagement } from './pages/admin/UserManagement'
 
+const studentOnly = (el: React.ReactElement) =>
+  createElement(RequireAuth, { roles: ['Student'] }, el)
+const teacherOnly = (el: React.ReactElement) =>
+  createElement(RequireAuth, { roles: ['Teacher'] }, el)
+const adminOnly = (el: React.ReactElement) =>
+  createElement(RequireAuth, { roles: ['Admin'] }, el)
+
 export const router = createBrowserRouter([
   { path: '/login', Component: Login },
   { path: '/register', Component: Register },
@@ -26,21 +33,24 @@ export const router = createBrowserRouter([
     element: createElement(RequireAuth, null, createElement(Layout)),
     children: [
       // Student
-      { index: true, Component: Dashboard },
-      { path: 'catalog', Component: Catalog },
-      { path: 'course-details', Component: CourseDetails },
-      { path: 'lesson-player', Component: LessonPlayer },
+      { index: true, element: studentOnly(createElement(Dashboard)) },
+      { path: 'catalog', element: studentOnly(createElement(Catalog)) },
+      { path: 'courses/:id', element: studentOnly(createElement(CourseDetails)) },
+      {
+        path: 'learn/:enrollmentId/:lessonId',
+        element: studentOnly(createElement(LessonPlayer)),
+      },
       // Teacher
-      { path: 'teacher/courses', Component: TeacherDashboard },
-      { path: 'teacher/course-editor', Component: CourseEditor },
-      { path: 'teacher/earnings', Component: Earnings },
-      { path: 'teacher/reviews', Component: StudentReviews },
-      { path: 'teacher/course-analytics', Component: CourseAnalytics },
+      { path: 'teacher/courses', element: teacherOnly(createElement(TeacherDashboard)) },
+      { path: 'teacher/course-editor', element: teacherOnly(createElement(CourseEditor)) },
+      { path: 'teacher/earnings', element: teacherOnly(createElement(Earnings)) },
+      { path: 'teacher/reviews', element: teacherOnly(createElement(StudentReviews)) },
+      { path: 'teacher/course-analytics', element: teacherOnly(createElement(CourseAnalytics)) },
       // Admin
-      { path: 'admin/overview', Component: AdminOverview },
-      { path: 'admin/payments', Component: FinancialControls },
-      { path: 'admin/payouts', Component: TeacherPayouts },
-      { path: 'admin/users', Component: UserManagement },
+      { path: 'admin/overview', element: adminOnly(createElement(AdminOverview)) },
+      { path: 'admin/payments', element: adminOnly(createElement(FinancialControls)) },
+      { path: 'admin/payouts', element: adminOnly(createElement(TeacherPayouts)) },
+      { path: 'admin/users', element: adminOnly(createElement(UserManagement)) },
     ],
   },
 ])

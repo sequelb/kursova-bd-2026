@@ -90,7 +90,7 @@ public static class DbSeeder
                 {
                     CourseId = course.Id,
                     OrderNumber = i,
-                    Title = $"Lesson {i}: Topic {i}",
+                    Title = $"Topic {i}",
                     Content = $"This is the text content of lesson {i} of \"{course.Title}\". " +
                               "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
                 });

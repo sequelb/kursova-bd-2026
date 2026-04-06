@@ -55,7 +55,10 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
             .Select(lp => lp.LessonId)
             .ToListAsync();
 
-        var hasReview = await db.Reviews.AnyAsync(r => r.EnrollmentId == id);
+        var myReview = await db.Reviews
+            .Where(r => r.EnrollmentId == id)
+            .Select(r => new MyReviewDto(r.Id, r.Grade, r.Comment, r.CreatedAt))
+            .SingleOrDefaultAsync();
 
         return new EnrollmentDetailDto(
             enrollment.Id,
@@ -65,7 +68,7 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
             enrollment.EnrolledAt,
             enrollment.Course.Lessons.Select(l => new LessonSummaryDto(l.Id, l.OrderNumber, l.Title)).ToList(),
             completed,
-            hasReview);
+            myReview);
     }
 
     [HttpGet("api/me/enrollments/{id:int}/lessons/{lessonId:int}")]
@@ -124,6 +127,24 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
         return new EnrollResultDto(enrollment.Id, firstLessonId);
     }
 
+    [HttpDelete("api/enrollments/{id:int}/lessons/{lessonId:int}/complete")]
+    public async Task<IActionResult> UncompleteLesson(int id, int lessonId)
+    {
+        var studentId = CurrentUserId;
+        var enrollment = await db.Enrollments
+            .SingleOrDefaultAsync(e => e.Id == id && e.StudentId == studentId);
+        if (enrollment is null) return NotFound();
+
+        var row = await db.LessonProgress
+            .SingleOrDefaultAsync(lp => lp.EnrollmentId == id && lp.LessonId == lessonId);
+        if (row is null) return NoContent();
+
+        db.LessonProgress.Remove(row);
+        await db.SaveChangesAsync();
+        // The trigger updates enrollments.progress for us.
+        return NoContent();
+    }
+
     [HttpPost("api/enrollments/{id:int}/lessons/{lessonId:int}/complete")]
     public async Task<IActionResult> CompleteLesson(int id, int lessonId)
     {
@@ -143,6 +164,29 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
         await db.SaveChangesAsync();
         // The trigger updates enrollments.progress for us.
         return NoContent();
+    }
+
+    [HttpPut("api/courses/{courseId:int}/reviews")]
+    public async Task<ActionResult<ReviewDto>> UpdateReview(int courseId, CreateReviewRequest req)
+    {
+        if (req.Grade is < 1 or > 5)
+            return BadRequest(new { error = "Grade must be between 1 and 5." });
+
+        var studentId = CurrentUserId;
+        var enrollment = await db.Enrollments
+            .Include(e => e.Student)
+            .SingleOrDefaultAsync(e => e.StudentId == studentId && e.CourseId == courseId);
+        if (enrollment is null) return BadRequest(new { error = "You are not enrolled in this course." });
+
+        var review = await db.Reviews.SingleOrDefaultAsync(r => r.EnrollmentId == enrollment.Id);
+        if (review is null) return NotFound(new { error = "No review to update." });
+
+        review.Grade = req.Grade;
+        review.Comment = req.Comment ?? string.Empty;
+        await db.SaveChangesAsync();
+
+        return new ReviewDto(review.Id, review.Grade, review.Comment, review.CreatedAt,
+            enrollment.Student!.FirstName, enrollment.Student.LastName);
     }
 
     [HttpPost("api/courses/{courseId:int}/reviews")]
