@@ -2,7 +2,7 @@ import { ChevronDown, Star } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { api, type CourseQuery } from '../../lib/api'
+import { api, type CourseQuery, type EnrollmentListItem } from '../../lib/api'
 
 type SortKey = NonNullable<CourseQuery['sort']>
 
@@ -62,6 +62,15 @@ export function Catalog() {
     queryKey: ['categories'],
     queryFn: api.listCategories,
   })
+  const enrollments = useQuery({
+    queryKey: ['enrollments'],
+    queryFn: api.listMyEnrollments,
+  })
+  const enrollmentByCourseId = useMemo(() => {
+    const map = new Map<number, EnrollmentListItem>()
+    for (const e of enrollments.data ?? []) map.set(e.courseId, e)
+    return map
+  }, [enrollments.data])
 
   const [showFilters, setShowFilters] = useState(false)
 
@@ -204,33 +213,41 @@ export function Catalog() {
 
         {courses.data && courses.data.length > 0 && (
           <div className="grid grid-cols-3 gap-6">
-            {courses.data.map((course) => (
-              <div key={course.id} className="border-2 border-gray-800 bg-white p-4 flex flex-col">
-                <div className="w-full h-40 border-2 border-gray-400 bg-gray-200 flex items-center justify-center mb-4">
-                  <span className="text-gray-500 text-sm">[Image Placeholder]</span>
+            {courses.data.map((course) => {
+              const enrollment = enrollmentByCourseId.get(course.id)
+              return (
+                <div key={course.id} className="relative border-2 border-gray-800 bg-white p-4 flex flex-col">
+                  {enrollment && (
+                    <div className="absolute top-2 right-2 px-2 py-1 border-2 border-gray-800 bg-gray-900 text-white text-xs font-bold">
+                      Enrolled · {enrollment.progress}%
+                    </div>
+                  )}
+                  <div className="w-full h-40 border-2 border-gray-400 bg-gray-200 flex items-center justify-center mb-4">
+                    <span className="text-gray-500 text-sm">[Image Placeholder]</span>
+                  </div>
+                  <h3 className="font-bold text-gray-900 mb-2">{course.title}</h3>
+                  <div className="flex items-center gap-1 mb-2">
+                    {renderStars(course.averageRating)}
+                    <span className="ml-1 text-sm text-gray-600">
+                      ({course.averageRating.toFixed(1)}) · {course.reviewCount}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-1">
+                    By {course.author.firstName} {course.author.lastName}
+                  </p>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Published: {new Date(course.createdAt).toISOString().slice(0, 10)}
+                  </p>
+                  <p className="font-bold text-gray-900 mb-4">${course.price.toFixed(2)}</p>
+                  <Link
+                    to={`/courses/${course.id}`}
+                    className="block w-full mt-auto py-2 text-center border-2 border-gray-800 bg-gray-900 text-white hover:bg-gray-700 transition-colors"
+                  >
+                    {enrollment ? 'Continue' : 'Details'}
+                  </Link>
                 </div>
-                <h3 className="font-bold text-gray-900 mb-2">{course.title}</h3>
-                <div className="flex items-center gap-1 mb-2">
-                  {renderStars(course.averageRating)}
-                  <span className="ml-1 text-sm text-gray-600">
-                    ({course.averageRating.toFixed(1)}) · {course.reviewCount}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600 mb-1">
-                  By {course.author.firstName} {course.author.lastName}
-                </p>
-                <p className="text-sm text-gray-600 mb-2">
-                  Published: {new Date(course.createdAt).toISOString().slice(0, 10)}
-                </p>
-                <p className="font-bold text-gray-900 mb-4">${course.price.toFixed(2)}</p>
-                <Link
-                  to={`/courses/${course.id}`}
-                  className="block w-full mt-auto py-2 text-center border-2 border-gray-800 bg-gray-900 text-white hover:bg-gray-700 transition-colors"
-                >
-                  Details
-                </Link>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

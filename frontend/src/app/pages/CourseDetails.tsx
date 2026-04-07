@@ -1,6 +1,7 @@
-import { Award, CheckCircle, BarChart, BookOpen, FileText } from 'lucide-react'
-import { useNavigate, useParams } from 'react-router'
+import { Award, CheckCircle, BarChart, BookOpen, FileText, Pencil, Star, Trash2 } from 'lucide-react'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
 
 export function CourseDetails() {
@@ -8,6 +9,7 @@ export function CourseDetails() {
   const courseId = Number(id)
   const nav = useNavigate()
   const qc = useQueryClient()
+  const [searchParams] = useSearchParams()
 
   const course = useQuery({
     queryKey: ['course', courseId],
@@ -22,6 +24,12 @@ export function CourseDetails() {
 
   const existingEnrollment = enrollments.data?.find((e) => e.courseId === courseId)
 
+  const enrollmentDetail = useQuery({
+    queryKey: ['enrollment', existingEnrollment?.id],
+    queryFn: () => api.getEnrollment(existingEnrollment!.id),
+    enabled: !!existingEnrollment,
+  })
+
   const enroll = useMutation({
     mutationFn: () => api.enroll(courseId),
     onSuccess: (res) => {
@@ -33,6 +41,59 @@ export function CourseDetails() {
     },
   })
 
+  // ---- review form state ----
+  const myReview = enrollmentDetail.data?.myReview ?? null
+  const [showReviewForm, setShowReviewForm] = useState(false)
+  const [reviewGrade, setReviewGrade] = useState(5)
+  const [reviewComment, setReviewComment] = useState('')
+
+  useEffect(() => {
+    if (myReview) {
+      setReviewGrade(myReview.grade)
+      setReviewComment(myReview.comment)
+    }
+  }, [myReview?.id])
+
+  // Smart-banner: ?review=open auto-opens the form and scrolls to it.
+  useEffect(() => {
+    if (searchParams.get('review') === 'open' && enrollmentDetail.data) {
+      setShowReviewForm(true)
+      setTimeout(() => {
+        document.getElementById('review-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 50)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get('review'), enrollmentDetail.data?.id])
+
+  const submitReview = useMutation({
+    mutationFn: () => {
+      const body = { grade: reviewGrade, comment: reviewComment }
+      return myReview ? api.updateReview(courseId, body) : api.createReview(courseId, body)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['enrollment', existingEnrollment?.id] })
+      qc.invalidateQueries({ queryKey: ['course', courseId] })
+      setShowReviewForm(false)
+    },
+  })
+
+  const deleteReview = useMutation({
+    mutationFn: () => api.deleteReview(courseId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['enrollment', existingEnrollment?.id] })
+      qc.invalidateQueries({ queryKey: ['course', courseId] })
+      setShowReviewForm(false)
+      setReviewGrade(5)
+      setReviewComment('')
+    },
+  })
+
+  function handleDeleteReview() {
+    if (window.confirm('Delete your review? This cannot be undone.')) {
+      deleteReview.mutate()
+    }
+  }
+
   if (course.isPending || enrollments.isPending) {
     return <div className="p-8 text-gray-600">Loading…</div>
   }
@@ -42,6 +103,7 @@ export function CourseDetails() {
   if (!course.data) return null
 
   const c = course.data
+  const isFinished = existingEnrollment && existingEnrollment.progress >= 100
 
   function handleContinue() {
     if (!existingEnrollment) return
@@ -97,6 +159,110 @@ export function CourseDetails() {
             </div>
           </section>
 
+          {/* Your review section — only for enrolled students */}
+          {existingEnrollment && (
+            <section id="review-section" className="mb-8">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Your Review</h2>
+
+              {/* Has a review */}
+              {myReview && !showReviewForm && (
+                <div className="border-2 border-gray-800 bg-white p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="text-sm text-gray-600 mb-2">
+                        {'★'.repeat(myReview.grade)}{'☆'.repeat(5 - myReview.grade)}
+                        {' · '}
+                        {new Date(myReview.createdAt).toISOString().slice(0, 10)}
+                      </div>
+                      <p className="text-gray-800 whitespace-pre-wrap">{myReview.comment}</p>
+                    </div>
+                    <div className="flex-shrink-0 flex gap-2">
+                      <button
+                        onClick={() => setShowReviewForm(true)}
+                        title="Edit review"
+                        className="p-2 border-2 border-gray-800 bg-white hover:bg-gray-200 transition-colors"
+                      >
+                        <Pencil className="w-4 h-4 text-gray-900" />
+                      </button>
+                      <button
+                        onClick={handleDeleteReview}
+                        disabled={deleteReview.isPending}
+                        title="Delete review"
+                        className="p-2 border-2 border-gray-800 bg-white hover:bg-red-100 transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-700" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* No review yet, finished or not — show CTA */}
+              {!myReview && !showReviewForm && (
+                <button
+                  onClick={() => setShowReviewForm(true)}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-4 border-2 border-gray-800 bg-gray-900 text-white hover:bg-gray-700 transition-colors"
+                >
+                  <Star className="w-5 h-5" />
+                  <span>Leave a Review & Rate Course</span>
+                </button>
+              )}
+
+              {/* Form */}
+              {showReviewForm && (
+                <div className="border-2 border-gray-800 bg-gray-100 p-6 space-y-3">
+                  <div>
+                    <label className="text-sm font-bold text-gray-900 block mb-1">Grade</label>
+                    <select
+                      value={reviewGrade}
+                      onChange={(ev) => setReviewGrade(Number(ev.target.value))}
+                      className="px-3 py-2 border-2 border-gray-800 bg-white"
+                    >
+                      {[5, 4, 3, 2, 1].map((g) => (
+                        <option key={g} value={g}>
+                          {'★'.repeat(g)} ({g})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-bold text-gray-900 block mb-1">Comment</label>
+                    <textarea
+                      value={reviewComment}
+                      onChange={(ev) => setReviewComment(ev.target.value)}
+                      rows={4}
+                      className="w-full px-3 py-2 border-2 border-gray-800 bg-white"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => submitReview.mutate()}
+                      disabled={submitReview.isPending}
+                      className="px-6 py-2 border-2 border-gray-800 bg-gray-900 text-white hover:bg-gray-700 transition-colors disabled:opacity-50"
+                    >
+                      {submitReview.isPending ? 'Submitting…' : myReview ? 'Save changes' : 'Submit'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowReviewForm(false)
+                        if (myReview) {
+                          setReviewGrade(myReview.grade)
+                          setReviewComment(myReview.comment)
+                        }
+                      }}
+                      className="px-6 py-2 border-2 border-gray-800 bg-white text-gray-900 hover:bg-gray-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {submitReview.error && (
+                    <p className="text-sm text-red-700">{(submitReview.error as Error).message}</p>
+                  )}
+                </div>
+              )}
+            </section>
+          )}
+
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-4">
               Student Reviews{' '}
@@ -151,12 +317,27 @@ export function CourseDetails() {
             </div>
 
             {existingEnrollment ? (
-              <button
-                onClick={handleContinue}
-                className="w-full py-4 mb-6 border-2 border-gray-800 bg-gray-900 text-white text-lg font-bold hover:bg-gray-700 transition-colors"
-              >
-                Continue Learning ({existingEnrollment.progress}%)
-              </button>
+              isFinished ? (
+                <div className="mb-6">
+                  <div className="w-full py-4 mb-3 border-2 border-gray-800 bg-white text-gray-900 text-lg font-bold text-center flex items-center justify-center gap-2">
+                    <CheckCircle className="w-5 h-5" />
+                    <span>Course Completed</span>
+                  </div>
+                  <button
+                    onClick={handleContinue}
+                    className="w-full py-2 border-2 border-gray-400 bg-white text-gray-700 hover:bg-gray-100 transition-colors text-sm"
+                  >
+                    Re-open lessons
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleContinue}
+                  className="w-full py-4 mb-6 border-2 border-gray-800 bg-gray-900 text-white text-lg font-bold hover:bg-gray-700 transition-colors"
+                >
+                  Continue Learning ({existingEnrollment.progress}%)
+                </button>
+              )
             ) : (
               <button
                 onClick={() => enroll.mutate()}

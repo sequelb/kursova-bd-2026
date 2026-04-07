@@ -1,7 +1,6 @@
-import { ChevronLeft, ChevronRight, CheckCircle, Lock, Star, FileText } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CheckCircle, Circle, Star, FileText } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
 
 export function LessonPlayer() {
@@ -39,34 +38,6 @@ export function LessonPlayer() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['enrollment', enrollmentId] })
       qc.invalidateQueries({ queryKey: ['enrollments'] })
-    },
-  })
-
-  // ---- review form state ----
-  const [showReviewForm, setShowReviewForm] = useState(false)
-  const [reviewGrade, setReviewGrade] = useState(5)
-  const [reviewComment, setReviewComment] = useState('')
-
-  // Pre-fill the form when an existing review loads
-  useEffect(() => {
-    if (enrollment.data?.myReview) {
-      setReviewGrade(enrollment.data.myReview.grade)
-      setReviewComment(enrollment.data.myReview.comment)
-    }
-  }, [enrollment.data?.myReview?.id])
-
-  const submitReview = useMutation({
-    mutationFn: () => {
-      const courseId = enrollment.data!.courseId
-      const body = { grade: reviewGrade, comment: reviewComment }
-      return enrollment.data!.myReview
-        ? api.updateReview(courseId, body)
-        : api.createReview(courseId, body)
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['enrollment', enrollmentId] })
-      qc.invalidateQueries({ queryKey: ['course', enrollment.data!.courseId] })
-      setShowReviewForm(false)
     },
   })
 
@@ -144,78 +115,26 @@ export function LessonPlayer() {
             )}
           </div>
 
-          {(allDone || e.myReview) && (
-            <div className="border-2 border-gray-800 bg-gray-100 p-6">
-              <h3 className="font-bold text-gray-900 mb-3">
-                {e.myReview ? 'Your review' : 'Finished the course?'}
-              </h3>
-              {!showReviewForm ? (
-                <button
-                  onClick={() => setShowReviewForm(true)}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3 border-2 border-gray-800 bg-gray-900 text-white hover:bg-gray-700 transition-colors"
-                >
-                  <Star className="w-5 h-5" />
-                  <span>{e.myReview ? 'Edit your review' : 'Leave a Review & Rate Course'}</span>
-                </button>
-              ) : (
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-bold text-gray-900 block mb-1">Grade</label>
-                    <select
-                      value={reviewGrade}
-                      onChange={(ev) => setReviewGrade(Number(ev.target.value))}
-                      className="px-3 py-2 border-2 border-gray-800 bg-white"
-                    >
-                      {[5, 4, 3, 2, 1].map((g) => (
-                        <option key={g} value={g}>
-                          {'★'.repeat(g)} ({g})
-                        </option>
-                      ))}
-                    </select>
+          {allDone && (
+            <Link
+              to={`/courses/${e.courseId}${e.myReview ? '' : '?review=open'}`}
+              className="block border-2 border-gray-800 bg-gray-100 p-6 hover:bg-gray-200 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Star className="w-6 h-6 text-gray-900" />
+                <div>
+                  <div className="font-bold text-gray-900">
+                    {e.myReview ? 'Course finished — view your review' : 'Course finished!'}
                   </div>
-                  <div>
-                    <label className="text-sm font-bold text-gray-900 block mb-1">Comment</label>
-                    <textarea
-                      value={reviewComment}
-                      onChange={(ev) => setReviewComment(ev.target.value)}
-                      rows={4}
-                      className="w-full px-3 py-2 border-2 border-gray-800 bg-white"
-                    />
+                  <div className="text-sm text-gray-700">
+                    {e.myReview
+                      ? 'Open the course page to read or edit your review.'
+                      : 'Head to the course page to leave a review.'}
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => submitReview.mutate()}
-                      disabled={submitReview.isPending}
-                      className="px-6 py-2 border-2 border-gray-800 bg-gray-900 text-white hover:bg-gray-700 transition-colors disabled:opacity-50"
-                    >
-                      {submitReview.isPending ? 'Submitting…' : e.myReview ? 'Save changes' : 'Submit'}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowReviewForm(false)
-                        if (e.myReview) {
-                          setReviewGrade(e.myReview.grade)
-                          setReviewComment(e.myReview.comment)
-                        }
-                      }}
-                      className="px-6 py-2 border-2 border-gray-800 bg-white text-gray-900 hover:bg-gray-200 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                  {submitReview.error && (
-                    <p className="text-sm text-red-700">{(submitReview.error as Error).message}</p>
-                  )}
                 </div>
-              )}
-
-              {e.myReview && !showReviewForm && (
-                <div className="mt-4 p-4 border-2 border-gray-400 bg-white">
-                  <div className="text-sm text-gray-600 mb-1">{'★'.repeat(e.myReview.grade)}</div>
-                  <p className="text-gray-800 whitespace-pre-wrap">{e.myReview.comment}</p>
-                </div>
-              )}
-            </div>
+                <ChevronRight className="w-5 h-5 text-gray-700 ml-auto" />
+              </div>
+            </Link>
           )}
         </div>
 
@@ -223,7 +142,12 @@ export function LessonPlayer() {
         <div className="flex-[3]">
           <div className="sticky top-8 border-2 border-gray-800 bg-white">
             <div className="border-b-2 border-gray-800 bg-gray-100 p-4">
-              <h2 className="font-bold text-gray-900">{e.courseTitle}</h2>
+              <Link
+                to={`/courses/${e.courseId}`}
+                className="font-bold text-gray-900 hover:underline"
+              >
+                {e.courseTitle}
+              </Link>
             </div>
 
             <div>
@@ -246,7 +170,7 @@ export function LessonPlayer() {
                       ) : isCurrent ? (
                         <FileText className="w-5 h-5 text-gray-900" />
                       ) : (
-                        <Lock className="w-5 h-5 text-gray-500" />
+                        <Circle className="w-5 h-5 text-gray-500" />
                       )}
                     </div>
                     <span

@@ -187,4 +187,6 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
+  deleteReview: (courseId: number) =>
+    request<void>(`/api/courses/${courseId}/reviews`, { method: 'DELETE' }),
 }

@@ -189,6 +189,22 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
             enrollment.Student!.FirstName, enrollment.Student.LastName);
     }
 
+    [HttpDelete("api/courses/{courseId:int}/reviews")]
+    public async Task<IActionResult> DeleteReview(int courseId)
+    {
+        var studentId = CurrentUserId;
+        var enrollment = await db.Enrollments
+            .SingleOrDefaultAsync(e => e.StudentId == studentId && e.CourseId == courseId);
+        if (enrollment is null) return BadRequest(new { error = "You are not enrolled in this course." });
+
+        var review = await db.Reviews.SingleOrDefaultAsync(r => r.EnrollmentId == enrollment.Id);
+        if (review is null) return NoContent();
+
+        db.Reviews.Remove(review);
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
     [HttpPost("api/courses/{courseId:int}/reviews")]
     public async Task<ActionResult<ReviewDto>> CreateReview(int courseId, CreateReviewRequest req)
     {
