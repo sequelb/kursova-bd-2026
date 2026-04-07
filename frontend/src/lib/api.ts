@@ -116,6 +116,17 @@ function buildCourseQuery(q: CourseQuery): string {
   return s ? `?${s}` : ''
 }
 
+/**
+ * Dispatched whenever an API call returns 401 or 403. The auth provider listens
+ * for it and re-fetches `/api/me` so that `RequireAuth` can redirect the user
+ * if their session is gone or their role no longer matches the route.
+ *
+ * This catches the "two-tab cookie swap" case: opening a second tab and logging
+ * in as a different user replaces the cookie shared by both tabs, and we want
+ * the first tab to notice the next time it tries to do anything.
+ */
+export const AUTH_INVALIDATED_EVENT = 'lp:auth-invalidated'
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(BASE + path, {
     credentials: 'include',
@@ -123,6 +134,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     ...init,
   })
   if (!res.ok) {
+    if ((res.status === 401 || res.status === 403) && path !== '/api/me') {
+      // Don't dispatch for /api/me itself — that would cause infinite loops.
+      window.dispatchEvent(new CustomEvent(AUTH_INVALIDATED_EVENT))
+    }
     let body: unknown = null
     try {
       body = await res.json()
@@ -189,4 +204,161 @@ export const api = {
     }),
   deleteReview: (courseId: number) =>
     request<void>(`/api/courses/${courseId}/reviews`, { method: 'DELETE' }),
+
+  // ---- teacher: courses ----
+  listMyTeacherCourses: () => request<TeacherCourseListItem[]>('/api/teacher/courses'),
+  getMyTeacherCourse: (id: number) => request<TeacherCourseDetail>(`/api/teacher/courses/${id}`),
+  createCourse: (body: CreateCourseRequest) =>
+    request<TeacherCourseDetail>('/api/teacher/courses', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateCourse: (id: number, body: CreateCourseRequest) =>
+    request<TeacherCourseDetail>(`/api/teacher/courses/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  deleteCourse: (id: number) =>
+    request<void>(`/api/teacher/courses/${id}`, { method: 'DELETE' }),
+  publishCourse: (id: number) =>
+    request<void>(`/api/teacher/courses/${id}/publish`, { method: 'POST' }),
+
+  // ---- teacher: lessons ----
+  addLesson: (courseId: number, body: { title: string; content: string }) =>
+    request<LessonEdit>(`/api/teacher/courses/${courseId}/lessons`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateLesson: (id: number, body: { title: string; content: string }) =>
+    request<LessonEdit>(`/api/teacher/lessons/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  deleteLesson: (id: number) =>
+    request<void>(`/api/teacher/lessons/${id}`, { method: 'DELETE' }),
+  reorderLessons: (courseId: number, lessonIds: number[]) =>
+    request<void>(`/api/teacher/courses/${courseId}/lessons/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify({ lessonIds }),
+    }),
+
+  // ---- teacher: analytics & reviews ----
+  getCourseAnalytics: (id: number) =>
+    request<CourseAnalytics>(`/api/teacher/courses/${id}/analytics`),
+  getEnrollmentsTimeline: (id: number, days = 30) =>
+    request<TimelinePoint[]>(`/api/teacher/courses/${id}/enrollments-timeline?days=${days}`),
+  listMyTeacherReviews: (courseId?: number) =>
+    request<TeacherReview[]>(
+      `/api/teacher/reviews${courseId ? `?courseId=${courseId}` : ''}`,
+    ),
+
+  // ---- teacher: earnings ----
+  getEarnings: () => request<Earnings>('/api/teacher/earnings'),
+  requestPayout: (amount: number) =>
+    request<PayoutHistoryItem>('/api/teacher/payouts', {
+      method: 'POST',
+      body: JSON.stringify({ amount }),
+    }),
+
+  // ---- teacher: my profile (bio) ----
+  getMyTeacherProfile: () => request<MyTeacherProfile>('/api/me/teacher-profile'),
+  updateMyTeacherProfile: (bio: string) =>
+    request<MyTeacherProfile>('/api/me/teacher-profile', {
+      method: 'PUT',
+      body: JSON.stringify({ bio }),
+    }),
+
+  // ---- public author page ----
+  getAuthor: (id: number) => request<AuthorPublic>(`/api/authors/${id}`),
+}
+
+// ---- teacher types ----
+
+export type TeacherCourseListItem = {
+  id: number
+  title: string
+  status: 'Draft' | 'Published'
+  level: string
+  price: number
+  enrollmentCount: number
+  averageRating: number
+  lessonCount: number
+  createdAt: string
+}
+
+export type LessonEdit = {
+  id: number
+  orderNumber: number
+  title: string
+  content: string
+}
+
+export type TeacherCourseDetail = {
+  id: number
+  title: string
+  description: string
+  price: number
+  level: string
+  status: 'Draft' | 'Published'
+  createdAt: string
+  categories: Category[]
+  lessons: LessonEdit[]
+}
+
+export type CreateCourseRequest = {
+  title: string
+  description: string
+  price: number
+  level: string
+  categoryIds: number[]
+}
+
+export type CourseAnalytics = {
+  courseId: number
+  courseTitle: string
+  enrollmentCount: number
+  revenue: number
+  averageRating: number
+  completionRate: number
+  recentStudents: { firstName: string; lastName: string; enrolledAt: string; progress: number }[]
+}
+
+export type TimelinePoint = { date: string; count: number }
+
+export type TeacherReview = {
+  id: number
+  courseId: number
+  courseTitle: string
+  studentFirstName: string
+  studentLastName: string
+  grade: number
+  comment: string
+  createdAt: string
+}
+
+export type PayoutHistoryItem = {
+  id: number
+  amount: number
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Paid'
+  requestedAt: string
+}
+
+export type Earnings = { balance: number; history: PayoutHistoryItem[] }
+
+export type MyTeacherProfile = { bio: string; balance: number }
+
+export type AuthorPublic = {
+  id: number
+  firstName: string
+  lastName: string
+  bio: string
+  courses: {
+    id: number
+    title: string
+    price: number
+    level: string
+    createdAt: string
+    averageRating: number
+    reviewCount: number
+  }[]
 }

@@ -233,7 +233,14 @@ export function Catalog() {
                     </span>
                   </div>
                   <p className="text-sm text-gray-600 mb-1">
-                    By {course.author.firstName} {course.author.lastName}
+                    By{' '}
+                    <Link
+                      to={`/authors/${course.author.id}`}
+                      onClick={(ev) => ev.stopPropagation()}
+                      className="text-gray-900 hover:underline"
+                    >
+                      {course.author.firstName} {course.author.lastName}
+                    </Link>
                   </p>
                   <p className="text-sm text-gray-600 mb-2">
                     Published: {new Date(course.createdAt).toISOString().slice(0, 10)}

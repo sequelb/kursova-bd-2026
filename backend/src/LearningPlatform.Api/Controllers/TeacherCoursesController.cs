@@ -212,6 +212,13 @@ public class TeacherCoursesController(AppDbContext db) : ControllerBase
         if (hasProgress)
             return BadRequest(new { error = "Cannot delete a lesson that students have already started." });
 
+        if (lesson.Course.Status == CourseStatus.Published)
+        {
+            var lessonCount = await db.Lessons.CountAsync(l => l.CourseId == lesson.CourseId);
+            if (lessonCount <= 1)
+                return BadRequest(new { error = "A published course must have at least one lesson. Add another lesson first or unpublish the course." });
+        }
+
         var courseId = lesson.CourseId;
         var deletedOrder = lesson.OrderNumber;
         db.Lessons.Remove(lesson);

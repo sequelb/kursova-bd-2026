@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { api, type User } from './api'
+import { api, AUTH_INVALIDATED_EVENT, type User } from './api'
 
 type AuthContextValue = {
   user: User | null
@@ -27,6 +27,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(setUser)
       .catch(() => setUser(null))
       .finally(() => setLoading(false))
+  }, [])
+
+  // Re-fetch /api/me whenever any API call gets 401/403. This catches the
+  // "two-tab cookie swap" case where another tab replaced the auth cookie.
+  useEffect(() => {
+    const handler = () => {
+      api.me().then(setUser).catch(() => setUser(null))
+    }
+    window.addEventListener(AUTH_INVALIDATED_EVENT, handler)
+    return () => window.removeEventListener(AUTH_INVALIDATED_EVENT, handler)
   }, [])
 
   const value: AuthContextValue = {

@@ -9,6 +9,7 @@ import {
   BarChart3,
   Users,
   LogOut,
+  IdCard,
 } from 'lucide-react'
 import { Link, useLocation, Outlet, useNavigate } from 'react-router'
 import { useState } from 'react'
@@ -16,7 +17,7 @@ import { useAuth } from '../../lib/auth'
 import type { Role } from '../../lib/api'
 
 const studentNavItems = [
-  { path: '/', label: 'My Learning', icon: GraduationCap },
+  { path: '/my-learning', label: 'My Learning', icon: GraduationCap },
   { path: '/catalog', label: 'Catalog', icon: BookOpen },
 ]
 
@@ -24,6 +25,7 @@ const teacherNavItems = [
   { path: '/teacher/courses', label: 'My Courses', icon: FileEdit },
   { path: '/teacher/reviews', label: 'Student Reviews', icon: MessageSquare },
   { path: '/teacher/earnings', label: 'Earnings & Payouts', icon: DollarSign },
+  { path: '/teacher/profile', label: 'My Profile', icon: IdCard },
 ]
 
 const adminNavItems = [

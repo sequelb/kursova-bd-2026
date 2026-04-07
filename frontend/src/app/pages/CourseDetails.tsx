@@ -1,5 +1,5 @@
 import { Award, CheckCircle, BarChart, BookOpen, FileText, Pencil, Star, Trash2 } from 'lucide-react'
-import { useNavigate, useParams, useSearchParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
@@ -120,6 +120,16 @@ export function CourseDetails() {
         {/* Left Column */}
         <div className="flex-[7]">
           <h1 className="mb-4 text-3xl font-bold text-gray-900">{c.title}</h1>
+
+          <div className="text-sm text-gray-700 mb-3">
+            By{' '}
+            <Link
+              to={`/authors/${c.author.id}`}
+              className="font-bold text-gray-900 hover:underline"
+            >
+              {c.author.firstName} {c.author.lastName}
+            </Link>
+          </div>
 
           <div className="flex items-center gap-2 mb-6 flex-wrap">
             <span className="text-sm text-gray-600">Categories:</span>
