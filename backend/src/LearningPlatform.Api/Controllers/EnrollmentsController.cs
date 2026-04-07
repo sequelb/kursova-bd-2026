@@ -116,9 +116,8 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
         };
         db.Enrollments.Add(enrollment);
 
-        // Credit the teacher's balance.
-        var author = await db.TeacherProfiles.FindAsync(course.AuthorId);
-        if (author is not null) author.Balance += course.Price;
+        // The teacher's balance is recomputed by trigger trg_payments_balance
+        // when the payments row is inserted above.
 
         await db.SaveChangesAsync();
         await tx.CommitAsync();
