@@ -54,6 +54,9 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> hasher) : Con
         if (user is null)
             return Unauthorized(new { error = "Invalid credentials." });
 
+        if (user.Status == UserStatus.Suspended)
+            return Unauthorized(new { error = "This account has been suspended." });
+
         var result = hasher.VerifyHashedPassword(user, user.PasswordHash, req.Password);
         if (result == PasswordVerificationResult.Failed)
             return Unauthorized(new { error = "Invalid credentials." });

@@ -10,6 +10,14 @@ public static class Roles
     public static readonly string[] SelfRegisterable = [Teacher, Student];
 }
 
+public static class UserStatus
+{
+    public const string Active = "Active";
+    public const string Suspended = "Suspended";
+
+    public static readonly string[] All = [Active, Suspended];
+}
+
 public class User
 {
     public int Id { get; set; }
@@ -18,6 +26,7 @@ public class User
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string Role { get; set; } = Roles.Student;
+    public string Status { get; set; } = UserStatus.Active;
 
     public TeacherProfile? TeacherProfile { get; set; }
 }

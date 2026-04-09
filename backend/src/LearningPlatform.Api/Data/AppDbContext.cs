@@ -26,7 +26,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(u => u.Email).IsRequired().HasMaxLength(255);
             e.Property(u => u.PasswordHash).IsRequired();
             e.Property(u => u.Role).IsRequired().HasMaxLength(20);
-            e.ToTable(t => t.HasCheckConstraint("ck_users_role", "role IN ('Admin','Teacher','Student')"));
+            e.Property(u => u.Status).IsRequired().HasMaxLength(20).HasDefaultValue(UserStatus.Active);
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_users_role", "role IN ('Admin','Teacher','Student')");
+                t.HasCheckConstraint("ck_users_status", "status IN ('Active','Suspended')");
+            });
         });
 
         b.Entity<TeacherProfile>(e =>
