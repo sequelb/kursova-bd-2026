@@ -7,6 +7,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{27CD2F68-185
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LearningPlatform.Api", "src\LearningPlatform.Api\LearningPlatform.Api.csproj", "{3E56E7CF-9AB9-4543-A785-F0A26DE1FA8C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LearningPlatform.DataLoader", "src\LearningPlatform.DataLoader\LearningPlatform.DataLoader.csproj", "{505DCE56-8E78-42EB-A3B7-AF2BF8310C94}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,8 +22,13 @@ Global
 		{3E56E7CF-9AB9-4543-A785-F0A26DE1FA8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3E56E7CF-9AB9-4543-A785-F0A26DE1FA8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3E56E7CF-9AB9-4543-A785-F0A26DE1FA8C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{505DCE56-8E78-42EB-A3B7-AF2BF8310C94}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{505DCE56-8E78-42EB-A3B7-AF2BF8310C94}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{505DCE56-8E78-42EB-A3B7-AF2BF8310C94}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{505DCE56-8E78-42EB-A3B7-AF2BF8310C94}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{3E56E7CF-9AB9-4543-A785-F0A26DE1FA8C} = {27CD2F68-185F-400F-A60A-9E9DFA6D9C03}
+		{505DCE56-8E78-42EB-A3B7-AF2BF8310C94} = {27CD2F68-185F-400F-A60A-9E9DFA6D9C03}
 	EndGlobalSection
 EndGlobal
