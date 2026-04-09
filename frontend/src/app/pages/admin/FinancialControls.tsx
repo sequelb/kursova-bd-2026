@@ -1,72 +1,125 @@
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { api } from '../../../lib/api'
+
 export function FinancialControls() {
-  const transactions = [
-    { id: 'TXN-10234', date: '2026-04-03', student: 'Sarah Johnson', course: 'Advanced JavaScript Concepts', amount: '79.99', status: 'Completed' },
-    { id: 'TXN-10233', date: '2026-04-02', student: 'Michael Brown', course: 'React for Beginners', amount: '59.99', status: 'Completed' },
-    { id: 'TXN-10232', date: '2026-04-01', student: 'Emily Davis', course: 'Python Programming Basics', amount: '89.99', status: 'Refunded' },
-    { id: 'TXN-10231', date: '2026-03-31', student: 'Robert Kim', course: 'UI/UX Design Fundamentals', amount: '69.99', status: 'Completed' },
-  ];
+  const [status, setStatus] = useState<'all' | 'Completed' | 'Refunded'>('all')
+  const [q, setQ] = useState('')
+  const qc = useQueryClient()
+
+  const payments = useQuery({
+    queryKey: ['admin-payments', status, q],
+    queryFn: () => api.listAdminPayments(status === 'all' ? undefined : status, q || undefined),
+  })
+
+  const refund = useMutation({
+    mutationFn: (id: number) => api.refundPayment(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-payments'] })
+      qc.invalidateQueries({ queryKey: ['admin-finance-dashboard'] })
+    },
+  })
+
+  function handleRefund(id: number) {
+    if (
+      window.confirm(
+        'Issue a refund for this payment? The student will lose access to the course and their lesson progress will be deleted.',
+      )
+    ) {
+      refund.mutate(id)
+    }
+  }
 
   return (
     <div className="p-8">
-      {/* Top Bar */}
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Student Payments & Refunds</h1>
-        <select className="px-4 py-2 border-2 border-gray-800 bg-white">
-          <option>Filter by Status</option>
-          <option>Completed</option>
-          <option>Refunded</option>
-          <option>Pending</option>
+      <h1 className="mb-6 text-2xl font-bold text-gray-900">Student Payments &amp; Refunds</h1>
+
+      {/* Filters */}
+      <div className="border-2 border-gray-800 bg-white p-4 mb-6 flex items-center gap-3 flex-wrap">
+        <span className="text-sm font-bold text-gray-900">Status:</span>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value as 'all' | 'Completed' | 'Refunded')}
+          className="px-3 py-2 border-2 border-gray-800 bg-white"
+        >
+          <option value="all">All</option>
+          <option value="Completed">Completed</option>
+          <option value="Refunded">Refunded</option>
         </select>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search by student or course…"
+          className="flex-1 min-w-[200px] px-3 py-2 border-2 border-gray-800 bg-white"
+        />
       </div>
 
-      {/* Transactions Table */}
-      <div className="border-2 border-gray-800 bg-white">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b-2 border-gray-800 bg-gray-100">
-              <th className="text-left px-6 py-4 font-bold text-gray-900">Transaction ID</th>
-              <th className="text-left px-6 py-4 font-bold text-gray-900">Date</th>
-              <th className="text-left px-6 py-4 font-bold text-gray-900">Student</th>
-              <th className="text-left px-6 py-4 font-bold text-gray-900">Course</th>
-              <th className="text-left px-6 py-4 font-bold text-gray-900">Amount</th>
-              <th className="text-left px-6 py-4 font-bold text-gray-900">Status</th>
-              <th className="text-left px-6 py-4 font-bold text-gray-900">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {transactions.map((transaction, index) => (
-              <tr
-                key={transaction.id}
-                className={index < transactions.length - 1 ? 'border-b-2 border-gray-400' : ''}
-              >
-                <td className="px-6 py-4 text-gray-900">{transaction.id}</td>
-                <td className="px-6 py-4 text-gray-700">{transaction.date}</td>
-                <td className="px-6 py-4 text-gray-900">{transaction.student}</td>
-                <td className="px-6 py-4 text-gray-700">{transaction.course}</td>
-                <td className="px-6 py-4 text-gray-900">${transaction.amount}</td>
-                <td className="px-6 py-4">
-                  <span
-                    className={`px-3 py-1 border-2 text-sm ${
-                      transaction.status === 'Completed'
-                        ? 'border-gray-800 bg-gray-900 text-white'
-                        : 'border-gray-400 bg-gray-100 text-gray-900'
-                    }`}
-                  >
-                    {transaction.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  {transaction.status === 'Completed' && (
-                    <button className="px-4 py-2 border-2 border-gray-800 bg-white text-gray-900 hover:bg-gray-200 transition-colors text-sm">
-                      Issue Refund
-                    </button>
-                  )}
-                </td>
+      {payments.isPending && <p className="text-gray-600">Loading…</p>}
+      {payments.error && (
+        <p className="text-red-700">Failed: {(payments.error as Error).message}</p>
+      )}
+      {payments.data && payments.data.length === 0 && (
+        <div className="border-2 border-gray-400 bg-white p-8 text-center text-gray-600">
+          No payments match your filters.
+        </div>
+      )}
+
+      {payments.data && payments.data.length > 0 && (
+        <div className="border-2 border-gray-800 bg-white">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b-2 border-gray-400 bg-gray-50">
+                <th className="text-left p-3 font-bold text-gray-900">ID</th>
+                <th className="text-left p-3 font-bold text-gray-900">Date</th>
+                <th className="text-left p-3 font-bold text-gray-900">Student</th>
+                <th className="text-left p-3 font-bold text-gray-900">Course</th>
+                <th className="text-left p-3 font-bold text-gray-900">Amount</th>
+                <th className="text-left p-3 font-bold text-gray-900">Status</th>
+                <th className="text-left p-3 font-bold text-gray-900">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {payments.data.map((p) => (
+                <tr key={p.id} className="border-b border-gray-300 last:border-b-0">
+                  <td className="p-3 text-gray-700">TXN-{String(p.id).padStart(5, '0')}</td>
+                  <td className="p-3 text-gray-700">
+                    {new Date(p.createdAt).toISOString().slice(0, 10)}
+                  </td>
+                  <td className="p-3 text-gray-900">{p.studentName}</td>
+                  <td className="p-3 text-gray-900">{p.courseTitle}</td>
+                  <td className="p-3 text-gray-900 font-bold">${p.amount.toFixed(2)}</td>
+                  <td className="p-3">
+                    <span
+                      className={`px-2 py-1 border-2 border-gray-800 text-xs font-bold ${
+                        p.status === 'Completed'
+                          ? 'bg-gray-900 text-white'
+                          : 'bg-white text-gray-900'
+                      }`}
+                    >
+                      {p.status}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    {p.status === 'Completed' && (
+                      <button
+                        onClick={() => handleRefund(p.id)}
+                        disabled={refund.isPending}
+                        className="px-3 py-1 border-2 border-gray-800 bg-white text-gray-900 hover:bg-red-100 transition-colors disabled:opacity-50 text-sm"
+                      >
+                        Issue Refund
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {refund.error && (
+        <p className="mt-4 text-sm text-red-700">{(refund.error as Error).message}</p>
+      )}
     </div>
-  );
+  )
 }

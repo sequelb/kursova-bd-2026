@@ -270,6 +270,96 @@ export const api = {
 
   // ---- public author page ----
   getAuthor: (id: number) => request<AuthorPublic>(`/api/authors/${id}`),
+
+  // ---- admin: finance ----
+  getAdminFinanceDashboard: (from?: string, to?: string) => {
+    const params = new URLSearchParams()
+    if (from) params.set('from', from)
+    if (to) params.set('to', to)
+    const qs = params.toString()
+    return request<AdminFinanceDashboard>(`/api/admin/finance-dashboard${qs ? '?' + qs : ''}`)
+  },
+  listAdminPayments: (status?: string, q?: string) => {
+    const params = new URLSearchParams()
+    if (status) params.set('status', status)
+    if (q) params.set('q', q)
+    const qs = params.toString()
+    return request<AdminPayment[]>(`/api/admin/payments${qs ? '?' + qs : ''}`)
+  },
+  refundPayment: (id: number) =>
+    request<void>(`/api/admin/payments/${id}/refund`, { method: 'POST' }),
+
+  // ---- admin: payouts ----
+  listAdminPayouts: (status?: string) => {
+    const params = new URLSearchParams()
+    if (status) params.set('status', status)
+    const qs = params.toString()
+    return request<AdminPayout[]>(`/api/admin/payouts${qs ? '?' + qs : ''}`)
+  },
+  approvePayout: (id: number) =>
+    request<void>(`/api/admin/payouts/${id}/approve`, { method: 'POST' }),
+  rejectPayout: (id: number) =>
+    request<void>(`/api/admin/payouts/${id}/reject`, { method: 'POST' }),
+  markPayoutPaid: (id: number) =>
+    request<void>(`/api/admin/payouts/${id}/mark-paid`, { method: 'POST' }),
+
+  // ---- admin: users ----
+  listAdminUsers: (filters: { role?: string; status?: string; q?: string } = {}) => {
+    const params = new URLSearchParams()
+    if (filters.role) params.set('role', filters.role)
+    if (filters.status) params.set('status', filters.status)
+    if (filters.q) params.set('q', filters.q)
+    const qs = params.toString()
+    return request<AdminUser[]>(`/api/admin/users${qs ? '?' + qs : ''}`)
+  },
+  updateUserStatus: (id: number, status: 'Active' | 'Suspended') =>
+    request<void>(`/api/admin/users/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    }),
+}
+
+// ---- admin types ----
+
+export type TimelinePointMoney = { date: string; amount: number }
+
+export type AdminFinanceDashboard = {
+  grossRevenue: number
+  totalRefunds: number
+  paidToTeachers: number
+  pendingPayoutsAmount: number
+  pendingPayoutsCount: number
+  revenueTimeline: TimelinePointMoney[]
+  payoutsTimeline: TimelinePointMoney[]
+}
+
+export type AdminPayment = {
+  id: number
+  createdAt: string
+  studentId: number
+  studentName: string
+  courseId: number
+  courseTitle: string
+  amount: number
+  status: 'Completed' | 'Refunded'
+}
+
+export type AdminPayout = {
+  id: number
+  requestedAt: string
+  teacherId: number
+  teacherName: string
+  amount: number
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Paid'
+}
+
+export type AdminUser = {
+  id: number
+  firstName: string
+  lastName: string
+  email: string
+  role: 'Admin' | 'Teacher' | 'Student'
+  status: 'Active' | 'Suspended'
 }
 
 // ---- teacher types ----
