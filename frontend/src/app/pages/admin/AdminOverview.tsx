@@ -48,11 +48,34 @@ export function AdminOverview() {
     if (!dashboard.data) return []
     const rev = dashboard.data.revenueTimeline
     const pay = dashboard.data.payoutsTimeline
-    return rev.map((r, i) => ({
-      date: r.date.slice(5, 10),
-      revenue: r.amount,
-      payouts: pay[i]?.amount ?? 0,
-    }))
+    const days = rev.length
+    // Pick a bucket size based on range length so the chart never has too many points.
+    // ≤60 days → daily, ≤365 days → weekly (7), >365 days → monthly (~30).
+    const bucketDays = days <= 60 ? 1 : days <= 365 ? 7 : 30
+    if (bucketDays === 1) {
+      return rev.map((r, i) => ({
+        label: r.date.slice(5, 10),
+        revenue: r.amount,
+        payouts: pay[i]?.amount ?? 0,
+      }))
+    }
+    const buckets: { label: string; revenue: number; payouts: number }[] = []
+    for (let i = 0; i < days; i += bucketDays) {
+      let revSum = 0
+      let paySum = 0
+      const end = Math.min(i + bucketDays, days)
+      for (let j = i; j < end; j++) {
+        revSum += rev[j].amount
+        paySum += pay[j]?.amount ?? 0
+      }
+      // Use the bucket's first day as its label
+      buckets.push({
+        label: rev[i].date.slice(5, 10),
+        revenue: revSum,
+        payouts: paySum,
+      })
+    }
+    return buckets
   }, [dashboard.data])
 
   return (
@@ -145,7 +168,7 @@ export function AdminOverview() {
                   margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#9ca3af" />
-                  <XAxis dataKey="date" stroke="#374151" />
+                  <XAxis dataKey="label" stroke="#374151" />
                   <YAxis stroke="#374151" />
                   <Tooltip />
                   <Legend />

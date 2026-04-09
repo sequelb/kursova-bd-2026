@@ -91,12 +91,14 @@ export function TeacherPayouts() {
                   <td className="p-3 text-gray-900">{p.teacherName}</td>
                   <td className="p-3 text-gray-900 font-bold">${p.amount.toFixed(2)}</td>
                   <td className="p-3">
-                    <span className={`px-2 py-1 border-2 text-xs font-bold ${statusBadge[p.status]}`}>
+                    <span
+                      className={`inline-block px-3 py-1 border-2 text-sm font-bold ${statusBadge[p.status]}`}
+                    >
                       {p.status}
                     </span>
                   </td>
                   <td className="p-3">
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 min-w-[180px]">
                       {p.status === 'Pending' && (
                         <>
                           <button

@@ -112,7 +112,7 @@ export function UserManagement() {
                     <td className="p-3 text-gray-900">{u.role}</td>
                     <td className="p-3">
                       <span
-                        className={`px-2 py-1 border-2 border-gray-800 text-xs font-bold ${
+                        className={`inline-block px-3 py-1 border-2 border-gray-800 text-sm font-bold ${
                           u.status === 'Active'
                             ? 'bg-gray-900 text-white'
                             : 'bg-white text-gray-900'

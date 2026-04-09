@@ -43,11 +43,29 @@ export function Earnings() {
       <h1 className="mb-6 text-2xl font-bold text-gray-900">Earnings & Payouts</h1>
 
       {/* Balance card */}
-      <div className="border-2 border-gray-800 bg-white p-6 mb-8">
+      <div
+        className={`border-2 p-6 mb-8 ${
+          e.balance < 0 ? 'border-red-700 bg-red-50' : 'border-gray-800 bg-white'
+        }`}
+      >
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm text-gray-600">Available Balance</div>
-            <div className="text-4xl font-bold text-gray-900 mt-1">${e.balance.toFixed(2)}</div>
+            <div
+              className={`text-4xl font-bold mt-1 ${
+                e.balance < 0 ? 'text-red-700' : 'text-gray-900'
+              }`}
+            >
+              ${e.balance.toFixed(2)}
+            </div>
+            {e.balance < 0 && (
+              <p className="text-sm text-red-700 mt-2 max-w-md">
+                You owe the platform ${Math.abs(e.balance).toFixed(2)}. This happens when a
+                student is refunded after you've already been paid out for their enrollment.
+                The deficit will be cleared as you earn from new enrollments. New payouts are
+                disabled until your balance is positive.
+              </p>
+            )}
           </div>
           {!requesting && (
             <button

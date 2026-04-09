@@ -90,7 +90,7 @@ export function FinancialControls() {
                   <td className="p-3 text-gray-900 font-bold">${p.amount.toFixed(2)}</td>
                   <td className="p-3">
                     <span
-                      className={`px-2 py-1 border-2 border-gray-800 text-xs font-bold ${
+                      className={`inline-block px-3 py-1 border-2 border-gray-800 text-sm font-bold ${
                         p.status === 'Completed'
                           ? 'bg-gray-900 text-white'
                           : 'bg-white text-gray-900'
@@ -100,15 +100,17 @@ export function FinancialControls() {
                     </span>
                   </td>
                   <td className="p-3">
-                    {p.status === 'Completed' && (
-                      <button
-                        onClick={() => handleRefund(p.id)}
-                        disabled={refund.isPending}
-                        className="px-3 py-1 border-2 border-gray-800 bg-white text-gray-900 hover:bg-red-100 transition-colors disabled:opacity-50 text-sm"
-                      >
-                        Issue Refund
-                      </button>
-                    )}
+                    <div className="min-w-[120px]">
+                      {p.status === 'Completed' && (
+                        <button
+                          onClick={() => handleRefund(p.id)}
+                          disabled={refund.isPending}
+                          className="px-3 py-1 border-2 border-gray-800 bg-white text-gray-900 hover:bg-red-100 transition-colors disabled:opacity-50 text-sm"
+                        >
+                          Issue Refund
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
