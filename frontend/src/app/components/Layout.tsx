@@ -81,9 +81,9 @@ export function Layout() {
   }
 
   return (
-    <div className="min-h-screen flex bg-white">
+    <div className="h-screen flex bg-white overflow-hidden">
       {/* Left Sidebar */}
-      <aside className="w-64 border-r-2 border-gray-800 bg-gray-100 p-6">
+      <aside className="w-64 border-r-2 border-gray-800 bg-gray-100 p-6 overflow-y-auto">
         <div className="mb-8">
           <div className="text-xl font-bold text-gray-900">{portalTitle}</div>
         </div>
