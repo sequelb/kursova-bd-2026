@@ -264,7 +264,7 @@ export function CourseEditor() {
         ) : null}
       </section>
 
-      {/* Danger zone */}
+      {/* Delete course */}
       {!isNew && course.data && (
         <section className="border-2 border-red-700 bg-red-50 p-6">
           <h2 className="text-lg font-bold text-red-800 mb-2">Delete course</h2>

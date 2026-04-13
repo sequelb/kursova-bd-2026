@@ -5,8 +5,8 @@ import { useAuth } from '../../lib/auth'
 export function Login() {
   const { login } = useAuth()
   const nav = useNavigate()
-  const [email, setEmail] = useState('alice@local')
-  const [password, setPassword] = useState('Passw0rd!')
+  const [email, setEmail] = useState('admin@local')
+  const [password, setPassword] = useState('admin123')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
