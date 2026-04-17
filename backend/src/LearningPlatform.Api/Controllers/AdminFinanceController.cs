@@ -87,7 +87,9 @@ public class AdminFinanceController(AppDbContext db) : ControllerBase
     }
 
     [HttpGet("api/admin/payments")]
-    public async Task<ActionResult<List<AdminPaymentDto>>> ListPayments([FromQuery] string? status, [FromQuery] string? q)
+    public async Task<ActionResult<PagedResult<AdminPaymentDto>>> ListPayments(
+        [FromQuery] string? status, [FromQuery] string? q,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         var query = db.Payments.AsQueryable();
         if (!string.IsNullOrWhiteSpace(status))
@@ -100,8 +102,14 @@ public class AdminFinanceController(AppDbContext db) : ControllerBase
                 EF.Functions.ILike(p.Student!.FirstName + " " + p.Student.LastName, term));
         }
 
-        return await query
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var totalCount = await query.CountAsync();
+
+        var items = await query
             .OrderByDescending(p => p.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(p => new AdminPaymentDto(
                 p.Id,
                 p.CreatedAt,
@@ -112,6 +120,8 @@ public class AdminFinanceController(AppDbContext db) : ControllerBase
                 p.Amount,
                 p.Status))
             .ToListAsync();
+
+        return new PagedResult<AdminPaymentDto>(items, totalCount, page, pageSize);
     }
 
     [HttpPost("api/admin/payments/{id:int}/refund")]

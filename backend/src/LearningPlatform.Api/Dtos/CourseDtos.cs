@@ -50,4 +50,6 @@ public record CourseQuery(
     double? MaxRating,
     DateTime? CreatedAfter,
     DateTime? CreatedBefore,
-    string? Sort);
+    string? Sort,
+    int Page = 1,
+    int PageSize = 12);

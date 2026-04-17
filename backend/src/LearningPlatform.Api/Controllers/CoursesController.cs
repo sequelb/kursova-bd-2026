@@ -13,7 +13,7 @@ namespace LearningPlatform.Api.Controllers;
 public class CoursesController(AppDbContext db) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<List<CourseListItemDto>>> List([FromQuery] CourseQuery q)
+    public async Task<ActionResult<PagedResult<CourseListItemDto>>> List([FromQuery] CourseQuery q)
     {
         var query = db.Courses
             .Where(c => c.Status == CourseStatus.Published)
@@ -54,7 +54,13 @@ public class CoursesController(AppDbContext db) : ControllerBase
             _ => projected.OrderByDescending(p => p.Course.CreatedAt), // newest (default)
         };
 
+        var page = Math.Max(1, q.Page);
+        var pageSize = Math.Clamp(q.PageSize, 1, 100);
+        var totalCount = await projected.CountAsync();
+
         var rows = await projected
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(p => new CourseListItemDto(
                 p.Course.Id,
                 p.Course.Title,
@@ -68,7 +74,7 @@ public class CoursesController(AppDbContext db) : ControllerBase
                 p.EnrollmentCount))
             .ToListAsync();
 
-        return rows;
+        return new PagedResult<CourseListItemDto>(rows, totalCount, page, pageSize);
     }
 
     [HttpGet("{id:int}")]

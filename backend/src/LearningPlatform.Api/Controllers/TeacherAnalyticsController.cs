@@ -83,15 +83,22 @@ public class TeacherAnalyticsController(AppDbContext db) : ControllerBase
     }
 
     [HttpGet("api/teacher/reviews")]
-    public async Task<ActionResult<List<TeacherReviewDto>>> Reviews([FromQuery] int? courseId)
+    public async Task<ActionResult<PagedResult<TeacherReviewDto>>> Reviews(
+        [FromQuery] int? courseId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         var teacherId = CurrentUserId;
         var query = db.Reviews
             .Where(r => r.Enrollment!.Course!.AuthorId == teacherId);
         if (courseId is not null) query = query.Where(r => r.Enrollment!.CourseId == courseId);
 
-        return await query
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var totalCount = await query.CountAsync();
+
+        var items = await query
             .OrderByDescending(r => r.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(r => new TeacherReviewDto(
                 r.Id,
                 r.Enrollment!.CourseId,
@@ -102,5 +109,7 @@ public class TeacherAnalyticsController(AppDbContext db) : ControllerBase
                 r.Comment,
                 r.CreatedAt))
             .ToListAsync();
+
+        return new PagedResult<TeacherReviewDto>(items, totalCount, page, pageSize);
     }
 }

@@ -13,14 +13,21 @@ namespace LearningPlatform.Api.Controllers;
 public class AdminPayoutsController(AppDbContext db) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<List<AdminPayoutDto>>> List([FromQuery] string? status)
+    public async Task<ActionResult<PagedResult<AdminPayoutDto>>> List(
+        [FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         var query = db.Payouts.AsQueryable();
         if (!string.IsNullOrWhiteSpace(status))
             query = query.Where(p => p.Status == status);
 
-        return await query
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var totalCount = await query.CountAsync();
+
+        var items = await query
             .OrderByDescending(p => p.RequestedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(p => new AdminPayoutDto(
                 p.Id,
                 p.RequestedAt,
@@ -29,6 +36,8 @@ public class AdminPayoutsController(AppDbContext db) : ControllerBase
                 p.Amount,
                 p.Status))
             .ToListAsync();
+
+        return new PagedResult<AdminPayoutDto>(items, totalCount, page, pageSize);
     }
 
     [HttpPost("{id:int}/approve")]
