@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using CsvHelper;
 using CsvHelper.Configuration;
 using CsvHelper.Configuration.Attributes;
@@ -22,9 +23,9 @@ namespace LearningPlatform.DataLoader;
 ///   users (teachers) — GENERATED (random names from NamePool, 1/teacher_count of CSV rows)
 ///   users (students) — GENERATED (random names from NamePool)
 ///   enrollments      — HYBRID (course is sampled weighted by `num_subscribers`;
-///                              student is uniformly random)
+///                              student is uniformly random; dates spread over configurable range)
 /// </summary>
-internal static class FullLoader
+internal static partial class FullLoader
 {
     private const int TeacherCount = 80;
     private const int StudentCount = 500;
@@ -34,7 +35,13 @@ internal static class FullLoader
     private static readonly string CsvPath = Path.Combine(
         AppContext.BaseDirectory, "data", "courses.csv");
 
-    public static async Task RunAsync(AppDbContext db, int? limit = null)
+    // Matches strings that contain ONLY basic Latin letters, digits, common punctuation, and whitespace.
+    // Rows whose title fails this check are skipped (non-Latin/emoji titles render as tofu).
+    [GeneratedRegex(@"^[\x20-\x7E]+$")]
+    private static partial Regex AsciiOnlyRegex();
+
+    public static async Task RunAsync(AppDbContext db, int? limit = null,
+        DateTime? enrollFromOverride = null, DateTime? enrollToOverride = null)
     {
         if (!File.Exists(CsvPath))
         {
@@ -47,17 +54,23 @@ internal static class FullLoader
 
         var hasher = new PasswordHasher<User>();
         var rng = new Random(42); // deterministic, makes runs reproducible
+        var enrollTo = enrollToOverride ?? DateTime.UtcNow;
 
         Console.WriteLine("Reading CSV...");
-        var rows = ReadCsv(CsvPath);
+        var allRows = ReadCsv(CsvPath);
+        Console.WriteLine($"  ✓ {allRows.Count} rows in file");
+
+        // Filter out rows with non-ASCII titles (render as tofu in the UI)
+        var rows = allRows.Where(r =>
+            !string.IsNullOrWhiteSpace(r.CourseTitle) && AsciiOnlyRegex().IsMatch(r.CourseTitle)).ToList();
+        var skipped = allRows.Count - rows.Count;
+        if (skipped > 0)
+            Console.WriteLine($"  ⚠ skipped {skipped} rows with non-ASCII titles");
+
         if (limit is not null && limit < rows.Count)
         {
-            Console.WriteLine($"  ✓ {rows.Count} rows total, taking first {limit} (--limit)");
+            Console.WriteLine($"  taking first {limit} (--limit)");
             rows = rows.Take(limit.Value).ToList();
-        }
-        else
-        {
-            Console.WriteLine($"  ✓ {rows.Count} rows");
         }
 
         // ---------- 1. categories (real) ----------
@@ -106,19 +119,18 @@ internal static class FullLoader
         // ---------- 3. courses (real) ----------
         Console.WriteLine("Inserting courses...");
         var courses = new List<Course>();
-        var courseSubscribers = new List<int>(); // parallel array for enrollment weighting
+        var courseSubscribers = new List<int>();
         for (var i = 0; i < rows.Count; i++)
         {
             var r = rows[i];
-            if (string.IsNullOrWhiteSpace(r.CourseTitle)) continue;
 
-            var teacher = teachers[i % teachers.Count]; // round-robin distribution
+            var teacher = teachers[i % teachers.Count];
             var category = categoryByName.TryGetValue(r.Subject?.Trim() ?? "", out var c) ? c : null;
 
             var course = new Course
             {
                 AuthorId = teacher.Id,
-                Title = Truncate(r.CourseTitle.Trim(), 200),
+                Title = Truncate(r.CourseTitle!.Trim(), 200),
                 Description = $"{r.CourseTitle.Trim()}.\n\nLorem ipsum dolor sit amet, " +
                               "consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut " +
                               "labore et dolore magna aliqua.",
@@ -132,7 +144,6 @@ internal static class FullLoader
             courseSubscribers.Add(Math.Max(1, r.NumSubscribers));
         }
 
-        // Insert courses in chunks to avoid massive single-batch INSERTs
         const int chunkSize = 500;
         for (var i = 0; i < courses.Count; i += chunkSize)
         {
@@ -198,10 +209,9 @@ internal static class FullLoader
         await db.SaveChangesAsync();
         Console.WriteLine($"  ✓ {students.Count} students");
 
-        // ---------- 6. enrollments (course weighted by subscribers, student uniform) ----------
+        // ---------- 6. enrollments (course weighted by subscribers, student uniform, dates spread) ----------
         Console.WriteLine("Generating enrollments...");
         var totalSubs = courseSubscribers.Aggregate(0L, (acc, s) => acc + s);
-        // Build cumulative weights for binary search sampling
         var cum = new long[courseSubscribers.Count];
         long running = 0;
         for (var i = 0; i < courseSubscribers.Count; i++)
@@ -210,8 +220,6 @@ internal static class FullLoader
             cum[i] = running;
         }
 
-        // Scale enrollment target down for small loads (e.g. --limit 100 → 1000 enrollments)
-        // and cap at the global default. Roughly aim for 10 enrollments per course on average.
         var targetEnrollments = Math.Min(TargetEnrollmentCount, courses.Count * 10);
         var taken = new HashSet<(int sid, int cid)>();
         var enrollmentBatch = new List<Enrollment>();
@@ -228,13 +236,27 @@ internal static class FullLoader
             var student = students[rng.Next(students.Count)];
             if (!taken.Add((student.Id, course.Id))) continue;
 
-            enrollmentBatch.Add(new Enrollment { StudentId = student.Id, CourseId = course.Id });
+            // Pick a random enrollment date between the course's creation and the
+            // configured end date (default: today). This spreads enrollments over time
+            // so analytics charts and date-range filters show realistic data.
+            var earliest = enrollFromOverride ?? course.CreatedAt;
+            var latest = enrollTo;
+            if (earliest > latest) earliest = latest; // safety
+            var enrolledAt = RandomDateBetween(rng, earliest, latest);
+
+            enrollmentBatch.Add(new Enrollment
+            {
+                StudentId = student.Id,
+                CourseId = course.Id,
+                EnrolledAt = enrolledAt,
+            });
             paymentBatch.Add(new Payment
             {
                 StudentId = student.Id,
                 CourseId = course.Id,
                 Amount = course.Price,
                 Status = PaymentStatus.Completed,
+                CreatedAt = enrolledAt,
             });
 
             if (enrollmentBatch.Count >= chunkSize)
@@ -293,6 +315,14 @@ internal static class FullLoader
                 DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var dt))
             return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
         return DateTime.UtcNow;
+    }
+
+    private static DateTime RandomDateBetween(Random rng, DateTime from, DateTime to)
+    {
+        var range = (to - from).TotalSeconds;
+        if (range <= 0) return from;
+        var offset = rng.NextDouble() * range;
+        return DateTime.SpecifyKind(from.AddSeconds(offset), DateTimeKind.Utc);
     }
 
     private static string Truncate(string s, int max) =>

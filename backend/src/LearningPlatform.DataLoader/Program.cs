@@ -10,12 +10,17 @@ var reset = args.Contains("--reset");
 var help = args.Contains("--help") || args.Contains("-h");
 
 int? limit = null;
+DateTime? enrollFrom = null;
+DateTime? enrollTo = null;
+
 for (var i = 0; i < args.Length; i++)
 {
     if (args[i] == "--limit" && i + 1 < args.Length && int.TryParse(args[i + 1], out var parsed) && parsed > 0)
-    {
         limit = parsed;
-    }
+    if (args[i] == "--enroll-from" && i + 1 < args.Length && DateTime.TryParse(args[i + 1], out var ef))
+        enrollFrom = DateTime.SpecifyKind(ef.Date, DateTimeKind.Utc);
+    if (args[i] == "--enroll-to" && i + 1 < args.Length && DateTime.TryParse(args[i + 1], out var et))
+        enrollTo = DateTime.SpecifyKind(et.Date, DateTimeKind.Utc);
 }
 
 if (help)
@@ -56,7 +61,7 @@ await EnsureAdminAsync(db);
 if (dev)
     await DevSeeder.RunAsync(db);
 else
-    await FullLoader.RunAsync(db, limit);
+    await FullLoader.RunAsync(db, limit, enrollFrom, enrollTo);
 
 return 0;
 
@@ -71,21 +76,22 @@ static void PrintHelp()
     Console.WriteLine("  --dev            Load the small hardcoded dev seed (sarah/john/alice + 6 courses)");
     Console.WriteLine();
     Console.WriteLine("Flags:");
-    Console.WriteLine("  --reset          Wipe existing content first (skips the confirm prompt)");
-    Console.WriteLine("  --limit N        Only import the first N rows from the CSV (full mode)");
-    Console.WriteLine("  -h, --help       Show this help");
+    Console.WriteLine("  --reset              Wipe existing content first (skips the confirm prompt)");
+    Console.WriteLine("  --limit N            Only import the first N rows from the CSV (full mode)");
+    Console.WriteLine("  --enroll-from DATE   Earliest enrollment date (default: course's publication date)");
+    Console.WriteLine("  --enroll-to DATE     Latest enrollment date (default: today)");
+    Console.WriteLine("  -h, --help           Show this help");
     Console.WriteLine();
     Console.WriteLine("Examples:");
     Console.WriteLine("  dotnet run --project src/LearningPlatform.DataLoader");
     Console.WriteLine("  dotnet run --project src/LearningPlatform.DataLoader -- --dev");
-    Console.WriteLine("  dotnet run --project src/LearningPlatform.DataLoader -- --reset --dev");
+    Console.WriteLine("  dotnet run --project src/LearningPlatform.DataLoader -- --reset --limit 500");
+    Console.WriteLine("  dotnet run --project src/LearningPlatform.DataLoader -- --reset --enroll-from 2025-01-01 --enroll-to 2026-04-15");
 }
 
 static async Task ResetAsync(AppDbContext db)
 {
     Console.WriteLine("Wiping existing content...");
-    // Order matters: child tables first. The schema's cascade rules clean up
-    // lesson_progress and reviews automatically when enrollments go.
     await db.Database.ExecuteSqlRawAsync("DELETE FROM lesson_progress");
     await db.Database.ExecuteSqlRawAsync("DELETE FROM reviews");
     await db.Database.ExecuteSqlRawAsync("DELETE FROM enrollments");
@@ -96,7 +102,6 @@ static async Task ResetAsync(AppDbContext db)
     await db.Database.ExecuteSqlRawAsync("DELETE FROM courses");
     await db.Database.ExecuteSqlRawAsync("DELETE FROM categories");
     await db.Database.ExecuteSqlRawAsync("DELETE FROM teacher_profiles");
-    // Keep the admin user; delete all other users.
     await db.Database.ExecuteSqlRawAsync($"DELETE FROM users WHERE role <> '{Roles.Admin}'");
     Console.WriteLine("  ✓ wiped");
 }
