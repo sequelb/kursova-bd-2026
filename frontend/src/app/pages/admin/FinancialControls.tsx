@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../../lib/api'
+import { Pagination } from '../../components/Pagination'
 
 export function FinancialControls() {
   const [status, setStatus] = useState<'all' | 'Completed' | 'Refunded'>('all')
   const [q, setQ] = useState('')
+  const [page, setPage] = useState(1)
   const qc = useQueryClient()
 
   const payments = useQuery({
-    queryKey: ['admin-payments', status, q],
-    queryFn: () => api.listAdminPayments(status === 'all' ? undefined : status, q || undefined),
+    queryKey: ['admin-payments', status, q, page],
+    queryFn: () => api.listAdminPayments(status === 'all' ? undefined : status, q || undefined, page),
   })
 
   const refund = useMutation({
@@ -39,7 +41,7 @@ export function FinancialControls() {
         <span className="text-sm font-bold text-gray-900">Status:</span>
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value as 'all' | 'Completed' | 'Refunded')}
+          onChange={(e) => { setStatus(e.target.value as 'all' | 'Completed' | 'Refunded'); setPage(1) }}
           className="px-3 py-2 border-2 border-gray-800 bg-white"
         >
           <option value="all">All</option>
@@ -48,7 +50,7 @@ export function FinancialControls() {
         </select>
         <input
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => { setQ(e.target.value); setPage(1) }}
           placeholder="Search by student or course…"
           className="flex-1 min-w-[200px] px-3 py-2 border-2 border-gray-800 bg-white"
         />
@@ -58,13 +60,13 @@ export function FinancialControls() {
       {payments.error && (
         <p className="text-red-700">Failed: {(payments.error as Error).message}</p>
       )}
-      {payments.data && payments.data.length === 0 && (
+      {payments.data && payments.data.items.length === 0 && (
         <div className="border-2 border-gray-400 bg-white p-8 text-center text-gray-600">
           No payments match your filters.
         </div>
       )}
 
-      {payments.data && payments.data.length > 0 && (
+      {payments.data && payments.data.items.length > 0 && (
         <div className="border-2 border-gray-800 bg-white">
           <table className="w-full">
             <thead>
@@ -79,7 +81,7 @@ export function FinancialControls() {
               </tr>
             </thead>
             <tbody>
-              {payments.data.map((p) => (
+              {payments.data.items.map((p) => (
                 <tr key={p.id} className="border-b border-gray-300 last:border-b-0">
                   <td className="p-3 text-gray-700">TXN-{String(p.id).padStart(5, '0')}</td>
                   <td className="p-3 text-gray-700">
@@ -117,6 +119,10 @@ export function FinancialControls() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {payments.data && (
+        <Pagination page={page} pageSize={20} totalCount={payments.data.totalCount} onPageChange={setPage} />
       )}
 
       {refund.error && (

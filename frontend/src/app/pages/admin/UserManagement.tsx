@@ -2,21 +2,24 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type AdminUser } from '../../../lib/api'
 import { useAuth } from '../../../lib/auth'
+import { Pagination } from '../../components/Pagination'
 
 export function UserManagement() {
   const { user: currentUser } = useAuth()
   const [role, setRole] = useState<'all' | AdminUser['role']>('all')
   const [status, setStatus] = useState<'all' | AdminUser['status']>('all')
   const [q, setQ] = useState('')
+  const [page, setPage] = useState(1)
   const qc = useQueryClient()
 
   const users = useQuery({
-    queryKey: ['admin-users', role, status, q],
+    queryKey: ['admin-users', role, status, q, page],
     queryFn: () =>
       api.listAdminUsers({
         role: role === 'all' ? undefined : role,
         status: status === 'all' ? undefined : status,
         q: q || undefined,
+        page,
       }),
   })
 
@@ -48,7 +51,7 @@ export function UserManagement() {
         <span className="text-sm font-bold text-gray-900">Role:</span>
         <select
           value={role}
-          onChange={(e) => setRole(e.target.value as 'all' | AdminUser['role'])}
+          onChange={(e) => { setRole(e.target.value as 'all' | AdminUser['role']); setPage(1) }}
           className="px-3 py-2 border-2 border-gray-800 bg-white"
         >
           <option value="all">All</option>
@@ -60,7 +63,7 @@ export function UserManagement() {
         <span className="text-sm font-bold text-gray-900 ml-3">Status:</span>
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value as 'all' | AdminUser['status'])}
+          onChange={(e) => { setStatus(e.target.value as 'all' | AdminUser['status']); setPage(1) }}
           className="px-3 py-2 border-2 border-gray-800 bg-white"
         >
           <option value="all">All</option>
@@ -70,7 +73,7 @@ export function UserManagement() {
 
         <input
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => { setQ(e.target.value); setPage(1) }}
           placeholder="Search by name or email…"
           className="flex-1 min-w-[200px] px-3 py-2 border-2 border-gray-800 bg-white"
         />
@@ -78,13 +81,13 @@ export function UserManagement() {
 
       {users.isPending && <p className="text-gray-600">Loading…</p>}
       {users.error && <p className="text-red-700">Failed: {(users.error as Error).message}</p>}
-      {users.data && users.data.length === 0 && (
+      {users.data && users.data.items.length === 0 && (
         <div className="border-2 border-gray-400 bg-white p-8 text-center text-gray-600">
           No users match your filters.
         </div>
       )}
 
-      {users.data && users.data.length > 0 && (
+      {users.data && users.data.items.length > 0 && (
         <div className="border-2 border-gray-800 bg-white">
           <table className="w-full">
             <thead>
@@ -98,7 +101,7 @@ export function UserManagement() {
               </tr>
             </thead>
             <tbody>
-              {users.data.map((u) => {
+              {users.data.items.map((u) => {
                 const isSelf = currentUser?.id === u.id
                 const isAdmin = u.role === 'Admin'
                 const disabled = isSelf || isAdmin || update.isPending
@@ -143,6 +146,10 @@ export function UserManagement() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {users.data && (
+        <Pagination page={page} pageSize={20} totalCount={users.data.totalCount} onPageChange={setPage} />
       )}
 
       {update.error && (

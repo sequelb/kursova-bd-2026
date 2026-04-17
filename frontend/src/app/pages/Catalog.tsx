@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { api, type CourseQuery, type EnrollmentListItem } from '../../lib/api'
+import { Pagination } from '../components/Pagination'
 
 type SortKey = NonNullable<CourseQuery['sort']>
 
@@ -41,6 +42,7 @@ export function Catalog() {
   const maxPrice = searchParams.get('maxPrice')
   const minRating = searchParams.get('minRating')
   const categoryIds = searchParams.getAll('categoryIds').map(Number)
+  const page = Number(searchParams.get('page') ?? '1') || 1
 
   const query: CourseQuery = useMemo(
     () => ({
@@ -50,8 +52,10 @@ export function Catalog() {
       maxPrice: maxPrice ? Number(maxPrice) : undefined,
       minRating: minRating ? Number(minRating) : undefined,
       categoryIds: categoryIds.length ? categoryIds : undefined,
+      page,
+      pageSize: 12,
     }),
-    [q, sort, minPrice, maxPrice, minRating, categoryIds.join(',')],
+    [q, sort, minPrice, maxPrice, minRating, categoryIds.join(','), page],
   )
 
   const courses = useQuery({
@@ -207,13 +211,13 @@ export function Catalog() {
         {courses.error && (
           <p className="text-red-700">Failed to load courses: {(courses.error as Error).message}</p>
         )}
-        {courses.data && courses.data.length === 0 && (
+        {courses.data && courses.data.items.length === 0 && (
           <p className="text-gray-600">No courses match your filters.</p>
         )}
 
-        {courses.data && courses.data.length > 0 && (
+        {courses.data && courses.data.items.length > 0 && (
           <div className="grid grid-cols-3 gap-6">
-            {courses.data.map((course) => {
+            {courses.data.items.map((course) => {
               const enrollment = enrollmentByCourseId.get(course.id)
               return (
                 <div key={course.id} className="relative border-2 border-gray-800 bg-white p-4 flex flex-col">
@@ -256,6 +260,15 @@ export function Catalog() {
               )
             })}
           </div>
+        )}
+
+        {courses.data && (
+          <Pagination
+            page={page}
+            pageSize={12}
+            totalCount={courses.data.totalCount}
+            onPageChange={(p) => patchParams({ page: p === 1 ? null : String(p) })}
+          />
         )}
       </div>
     </div>

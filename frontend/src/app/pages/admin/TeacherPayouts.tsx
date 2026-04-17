@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type AdminPayout } from '../../../lib/api'
+import { Pagination } from '../../components/Pagination'
 
 const STATUSES: AdminPayout['status'][] = ['Pending', 'Approved', 'Rejected', 'Paid']
 
@@ -13,11 +14,12 @@ const statusBadge: Record<AdminPayout['status'], string> = {
 
 export function TeacherPayouts() {
   const [filter, setFilter] = useState<'all' | AdminPayout['status']>('all')
+  const [page, setPage] = useState(1)
   const qc = useQueryClient()
 
   const payouts = useQuery({
-    queryKey: ['admin-payouts', filter],
-    queryFn: () => api.listAdminPayouts(filter === 'all' ? undefined : filter),
+    queryKey: ['admin-payouts', filter, page],
+    queryFn: () => api.listAdminPayouts(filter === 'all' ? undefined : filter, page),
   })
 
   function invalidateAll() {
@@ -48,7 +50,7 @@ export function TeacherPayouts() {
         <span className="text-sm font-bold text-gray-900">Status:</span>
         <select
           value={filter}
-          onChange={(e) => setFilter(e.target.value as 'all' | AdminPayout['status'])}
+          onChange={(e) => { setFilter(e.target.value as 'all' | AdminPayout['status']); setPage(1) }}
           className="px-3 py-2 border-2 border-gray-800 bg-white"
         >
           <option value="all">All</option>
@@ -64,13 +66,13 @@ export function TeacherPayouts() {
       {payouts.error && (
         <p className="text-red-700">Failed: {(payouts.error as Error).message}</p>
       )}
-      {payouts.data && payouts.data.length === 0 && (
+      {payouts.data && payouts.data.items.length === 0 && (
         <div className="border-2 border-gray-400 bg-white p-8 text-center text-gray-600">
           No payout requests.
         </div>
       )}
 
-      {payouts.data && payouts.data.length > 0 && (
+      {payouts.data && payouts.data.items.length > 0 && (
         <div className="border-2 border-gray-800 bg-white">
           <table className="w-full">
             <thead>
@@ -83,7 +85,7 @@ export function TeacherPayouts() {
               </tr>
             </thead>
             <tbody>
-              {payouts.data.map((p) => (
+              {payouts.data.items.map((p) => (
                 <tr key={p.id} className="border-b border-gray-300 last:border-b-0">
                   <td className="p-3 text-gray-700">
                     {new Date(p.requestedAt).toISOString().slice(0, 10)}
@@ -133,6 +135,10 @@ export function TeacherPayouts() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {payouts.data && (
+        <Pagination page={page} pageSize={20} totalCount={payouts.data.totalCount} onPageChange={setPage} />
       )}
 
       {anyError && (

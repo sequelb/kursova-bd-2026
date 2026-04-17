@@ -89,6 +89,13 @@ export type LessonContent = {
 
 export type EnrollResult = { enrollmentId: number; firstLessonId: number | null }
 
+export type PagedResult<T> = {
+  items: T[]
+  totalCount: number
+  page: number
+  pageSize: number
+}
+
 export type CourseQuery = {
   q?: string
   categoryIds?: number[]
@@ -99,6 +106,8 @@ export type CourseQuery = {
   createdAfter?: string
   createdBefore?: string
   sort?: 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'rating_desc'
+  page?: number
+  pageSize?: number
 }
 
 function buildCourseQuery(q: CourseQuery): string {
@@ -112,6 +121,8 @@ function buildCourseQuery(q: CourseQuery): string {
   if (q.createdAfter) params.set('createdAfter', q.createdAfter)
   if (q.createdBefore) params.set('createdBefore', q.createdBefore)
   if (q.sort) params.set('sort', q.sort)
+  if (q.page != null) params.set('page', String(q.page))
+  if (q.pageSize != null) params.set('pageSize', String(q.pageSize))
   const s = params.toString()
   return s ? `?${s}` : ''
 }
@@ -178,7 +189,7 @@ export const api = {
   // ---- catalog ----
   listCategories: () => request<Category[]>('/api/categories'),
   listCourses: (q: CourseQuery = {}) =>
-    request<CourseListItem[]>('/api/courses' + buildCourseQuery(q)),
+    request<PagedResult<CourseListItem>>('/api/courses' + buildCourseQuery(q)),
   getCourse: (id: number) => request<CourseDetail>(`/api/courses/${id}`),
 
   // ---- student / enrollments ----
@@ -247,10 +258,13 @@ export const api = {
     request<CourseAnalytics>(`/api/teacher/courses/${id}/analytics`),
   getEnrollmentsTimeline: (id: number, days = 30) =>
     request<TimelinePoint[]>(`/api/teacher/courses/${id}/enrollments-timeline?days=${days}`),
-  listMyTeacherReviews: (courseId?: number) =>
-    request<TeacherReview[]>(
-      `/api/teacher/reviews${courseId ? `?courseId=${courseId}` : ''}`,
-    ),
+  listMyTeacherReviews: (courseId?: number, page = 1, pageSize = 20) => {
+    const params = new URLSearchParams()
+    if (courseId != null) params.set('courseId', String(courseId))
+    params.set('page', String(page))
+    params.set('pageSize', String(pageSize))
+    return request<PagedResult<TeacherReview>>(`/api/teacher/reviews?${params}`)
+  },
 
   // ---- teacher: earnings ----
   getEarnings: () => request<Earnings>('/api/teacher/earnings'),
@@ -279,22 +293,24 @@ export const api = {
     const qs = params.toString()
     return request<AdminFinanceDashboard>(`/api/admin/finance-dashboard${qs ? '?' + qs : ''}`)
   },
-  listAdminPayments: (status?: string, q?: string) => {
+  listAdminPayments: (status?: string, q?: string, page = 1, pageSize = 20) => {
     const params = new URLSearchParams()
     if (status) params.set('status', status)
     if (q) params.set('q', q)
-    const qs = params.toString()
-    return request<AdminPayment[]>(`/api/admin/payments${qs ? '?' + qs : ''}`)
+    params.set('page', String(page))
+    params.set('pageSize', String(pageSize))
+    return request<PagedResult<AdminPayment>>(`/api/admin/payments?${params}`)
   },
   refundPayment: (id: number) =>
     request<void>(`/api/admin/payments/${id}/refund`, { method: 'POST' }),
 
   // ---- admin: payouts ----
-  listAdminPayouts: (status?: string) => {
+  listAdminPayouts: (status?: string, page = 1, pageSize = 20) => {
     const params = new URLSearchParams()
     if (status) params.set('status', status)
-    const qs = params.toString()
-    return request<AdminPayout[]>(`/api/admin/payouts${qs ? '?' + qs : ''}`)
+    params.set('page', String(page))
+    params.set('pageSize', String(pageSize))
+    return request<PagedResult<AdminPayout>>(`/api/admin/payouts?${params}`)
   },
   approvePayout: (id: number) =>
     request<void>(`/api/admin/payouts/${id}/approve`, { method: 'POST' }),
@@ -304,13 +320,14 @@ export const api = {
     request<void>(`/api/admin/payouts/${id}/mark-paid`, { method: 'POST' }),
 
   // ---- admin: users ----
-  listAdminUsers: (filters: { role?: string; status?: string; q?: string } = {}) => {
+  listAdminUsers: (filters: { role?: string; status?: string; q?: string; page?: number; pageSize?: number } = {}) => {
     const params = new URLSearchParams()
     if (filters.role) params.set('role', filters.role)
     if (filters.status) params.set('status', filters.status)
     if (filters.q) params.set('q', filters.q)
-    const qs = params.toString()
-    return request<AdminUser[]>(`/api/admin/users${qs ? '?' + qs : ''}`)
+    params.set('page', String(filters.page ?? 1))
+    params.set('pageSize', String(filters.pageSize ?? 20))
+    return request<PagedResult<AdminUser>>(`/api/admin/users?${params}`)
   },
   updateUserStatus: (id: number, status: 'Active' | 'Suspended') =>
     request<void>(`/api/admin/users/${id}/status`, {

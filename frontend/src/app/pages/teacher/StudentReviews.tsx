@@ -2,18 +2,20 @@ import { Star } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api } from '../../../lib/api'
+import { Pagination } from '../../components/Pagination'
 
 export function StudentReviews() {
   const [courseFilter, setCourseFilter] = useState<number | 'all'>('all')
+  const [page, setPage] = useState(1)
 
   const courses = useQuery({
     queryKey: ['teacher-courses'],
     queryFn: api.listMyTeacherCourses,
   })
   const reviews = useQuery({
-    queryKey: ['teacher-reviews', courseFilter],
+    queryKey: ['teacher-reviews', courseFilter, page],
     queryFn: () =>
-      api.listMyTeacherReviews(courseFilter === 'all' ? undefined : courseFilter),
+      api.listMyTeacherReviews(courseFilter === 'all' ? undefined : courseFilter, page),
   })
 
   return (
@@ -24,9 +26,10 @@ export function StudentReviews() {
         <span className="text-sm font-bold text-gray-900">Filter by course:</span>
         <select
           value={courseFilter}
-          onChange={(e) =>
+          onChange={(e) => {
             setCourseFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))
-          }
+            setPage(1)
+          }}
           className="px-3 py-2 border-2 border-gray-800 bg-white"
         >
           <option value="all">All courses</option>
@@ -42,14 +45,14 @@ export function StudentReviews() {
       {reviews.error && (
         <p className="text-red-700">Failed: {(reviews.error as Error).message}</p>
       )}
-      {reviews.data && reviews.data.length === 0 && (
+      {reviews.data && reviews.data.items.length === 0 && (
         <div className="border-2 border-gray-400 bg-white p-8 text-center text-gray-600">
           No reviews{courseFilter !== 'all' ? ' for this course' : ''} yet.
         </div>
       )}
 
       <div className="space-y-4">
-        {reviews.data?.map((r) => (
+        {reviews.data?.items.map((r) => (
           <div key={r.id} className="border-2 border-gray-800 bg-white p-6">
             <div className="flex items-start justify-between mb-2">
               <div>
@@ -75,6 +78,10 @@ export function StudentReviews() {
           </div>
         ))}
       </div>
+
+      {reviews.data && (
+        <Pagination page={page} pageSize={20} totalCount={reviews.data.totalCount} onPageChange={setPage} />
+      )}
     </div>
   )
 }
