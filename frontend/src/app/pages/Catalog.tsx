@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { api, type CourseQuery, type EnrollmentListItem } from '../../lib/api'
 import { Pagination } from '../components/Pagination'
+import { CategoryMultiSelect } from '../components/CategoryMultiSelect'
 
 type SortKey = NonNullable<CourseQuery['sort']>
 
@@ -89,13 +90,6 @@ export function Catalog() {
     setSearchParams(next, { replace: true })
   }
 
-  function toggleCategory(id: number) {
-    const next = new Set(categoryIds)
-    if (next.has(id)) next.delete(id)
-    else next.add(id)
-    patchParams({ categoryIds: Array.from(next).map(String) })
-  }
-
   return (
     <div>
       {/* Filter Bar */}
@@ -141,24 +135,13 @@ export function Catalog() {
           <div className="mt-4 grid grid-cols-3 gap-6 border-t-2 border-gray-400 pt-4">
             <div>
               <div className="text-sm font-bold text-gray-900 mb-2">Categories</div>
-              <div className="flex flex-wrap gap-2">
-                {categories.data?.map((c) => {
-                  const active = categoryIds.includes(c.id)
-                  return (
-                    <button
-                      key={c.id}
-                      onClick={() => toggleCategory(c.id)}
-                      className={`px-3 py-1 border-2 text-sm transition-colors ${
-                        active
-                          ? 'border-gray-800 bg-gray-900 text-white'
-                          : 'border-gray-400 bg-white text-gray-900 hover:bg-gray-200'
-                      }`}
-                    >
-                      {c.name}
-                    </button>
-                  )
-                })}
-              </div>
+              <CategoryMultiSelect
+                categories={categories.data ?? []}
+                selected={categoryIds}
+                onChange={(ids) =>
+                  patchParams({ categoryIds: ids.length ? ids.map(String) : null })
+                }
+              />
             </div>
 
             <div>

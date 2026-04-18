@@ -12,6 +12,7 @@ import {
   Upload,
 } from 'lucide-react'
 import { api, type CreateCourseRequest, type LessonEdit } from '../../../lib/api'
+import { CategoryMultiSelect } from '../../components/CategoryMultiSelect'
 
 const LEVELS = ['Beginner', 'Intermediate', 'Advanced']
 
@@ -62,15 +63,6 @@ export function CourseEditor() {
     setDirty(true)
   }
 
-  function toggleCategory(catId: number) {
-    setDirty(true)
-    setForm((f) => ({
-      ...f,
-      categoryIds: f.categoryIds.includes(catId)
-        ? f.categoryIds.filter((x) => x !== catId)
-        : [...f.categoryIds, catId],
-    }))
-  }
 
   // ---- mutations ----
   const save = useMutation({
@@ -211,25 +203,14 @@ export function CourseEditor() {
 
           <div>
             <span className="text-sm font-bold text-gray-900 block mb-2">Categories</span>
-            <div className="flex flex-wrap gap-2">
-              {categories.data?.map((c) => {
-                const active = form.categoryIds.includes(c.id)
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => toggleCategory(c.id)}
-                    className={`px-3 py-1 border-2 text-sm transition-colors ${
-                      active
-                        ? 'border-gray-800 bg-gray-900 text-white'
-                        : 'border-gray-400 bg-white text-gray-900 hover:bg-gray-200'
-                    }`}
-                  >
-                    {c.name}
-                  </button>
-                )
-              })}
-            </div>
+            <CategoryMultiSelect
+              categories={categories.data ?? []}
+              selected={form.categoryIds}
+              onChange={(ids) => {
+                setForm((f) => ({ ...f, categoryIds: ids }))
+                setDirty(true)
+              }}
+            />
           </div>
         </div>
 
