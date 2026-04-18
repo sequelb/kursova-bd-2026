@@ -2,6 +2,7 @@ import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
+import { useDebounce } from '../../../lib/useDebounce'
 import {
   CartesianGrid,
   Line,
@@ -38,6 +39,8 @@ export function CourseAnalytics() {
   const courseId = Number(id)
   const [from, setFrom] = useState(daysAgo(29))
   const [to, setTo] = useState(today())
+  const debouncedFrom = useDebounce(from)
+  const debouncedTo = useDebounce(to)
 
   const analytics = useQuery({
     queryKey: ['course-analytics', courseId],
@@ -45,8 +48,8 @@ export function CourseAnalytics() {
     enabled: Number.isFinite(courseId),
   })
   const timeline = useQuery({
-    queryKey: ['enrollments-timeline', courseId, from, to],
-    queryFn: () => api.getEnrollmentsTimeline(courseId, from, to),
+    queryKey: ['enrollments-timeline', courseId, debouncedFrom, debouncedTo],
+    queryFn: () => api.getEnrollmentsTimeline(courseId, debouncedFrom, debouncedTo),
     enabled: Number.isFinite(courseId),
   })
 

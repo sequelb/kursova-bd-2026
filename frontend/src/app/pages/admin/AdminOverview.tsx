@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
+import { useDebounce } from '../../../lib/useDebounce'
 import {
   CartesianGrid,
   Legend,
@@ -38,10 +39,12 @@ const PRESETS: { label: string; from: () => string; to: () => string }[] = [
 export function AdminOverview() {
   const [from, setFrom] = useState(daysAgo(29))
   const [to, setTo] = useState(today())
+  const debouncedFrom = useDebounce(from)
+  const debouncedTo = useDebounce(to)
 
   const dashboard = useQuery({
-    queryKey: ['admin-finance-dashboard', from, to],
-    queryFn: () => api.getAdminFinanceDashboard(from, to),
+    queryKey: ['admin-finance-dashboard', debouncedFrom, debouncedTo],
+    queryFn: () => api.getAdminFinanceDashboard(debouncedFrom, debouncedTo),
   })
 
   const chartData = useMemo(() => {
