@@ -187,9 +187,13 @@ internal static partial class FullLoader
         Console.WriteLine();
         Console.WriteLine($"  ✓ {totalLessons} lessons");
 
-        // ---------- 5. students (generated) ----------
+        // ---------- 5. students (generated, each with 1-2 preferred categories) ----------
         Console.WriteLine("Generating students...");
         var students = new List<User>();
+        // Each student gets 1-2 preferred categories. 70% of their enrollments will
+        // be biased toward courses in those categories, 30% random. This makes the
+        // recommendation algorithm produce meaningful results.
+        var studentPreferences = new List<HashSet<int>>(); // categoryId sets, parallel with students
         for (var i = 0; i < StudentCount; i++)
         {
             var (first, last) = NamePool.Random(rng);
@@ -204,12 +208,33 @@ internal static partial class FullLoader
                 Role = Roles.Student,
                 PasswordHash = hasher.HashPassword(null!, "password123"),
             });
+            // Pick 1-2 preferred categories
+            var prefCount = rng.Next(1, 3); // 1 or 2
+            var prefs = new HashSet<int>();
+            while (prefs.Count < prefCount && prefs.Count < categories.Count)
+                prefs.Add(categories[rng.Next(categories.Count)].Id);
+            studentPreferences.Add(prefs);
         }
         db.Users.AddRange(students);
         await db.SaveChangesAsync();
-        Console.WriteLine($"  ✓ {students.Count} students");
+        Console.WriteLine($"  ✓ {students.Count} students (each with 1-2 preferred categories)");
 
-        // ---------- 6. enrollments (course weighted by subscribers, student uniform, dates spread) ----------
+        // Build a category → course index for biased enrollment
+        var coursesByCategory = new Dictionary<int, List<int>>(); // categoryId → list of course indexes
+        for (var i = 0; i < courses.Count; i++)
+        {
+            foreach (var cat in courses[i].Categories)
+            {
+                if (!coursesByCategory.TryGetValue(cat.Id, out var list))
+                {
+                    list = new List<int>();
+                    coursesByCategory[cat.Id] = list;
+                }
+                list.Add(i);
+            }
+        }
+
+        // ---------- 6. enrollments (category-biased, dates spread) ----------
         Console.WriteLine("Generating enrollments...");
         var totalSubs = courseSubscribers.Aggregate(0L, (acc, s) => acc + s);
         var cum = new long[courseSubscribers.Count];
@@ -222,66 +247,157 @@ internal static partial class FullLoader
 
         var targetEnrollments = Math.Min(TargetEnrollmentCount, courses.Count * 10);
         var taken = new HashSet<(int sid, int cid)>();
-        var enrollmentBatch = new List<Enrollment>();
-        var paymentBatch = new List<Payment>();
+        var enrollmentList = new List<(Enrollment e, Payment p)>();
         var attempts = 0;
         var maxAttempts = targetEnrollments * 4;
 
         while (taken.Count < targetEnrollments && attempts < maxAttempts)
         {
             attempts++;
-            var roll = (long)(rng.NextDouble() * totalSubs);
-            var idx = BinarySearchUpper(cum, roll);
-            var course = courses[idx];
-            var student = students[rng.Next(students.Count)];
+            var studentIdx = rng.Next(students.Count);
+            var student = students[studentIdx];
+            var prefs = studentPreferences[studentIdx];
+
+            int courseIdx;
+            if (rng.NextDouble() < 0.7 && prefs.Count > 0 && coursesByCategory.Count > 0)
+            {
+                // 70% chance: pick a course from a preferred category
+                var prefCatId = prefs.ElementAt(rng.Next(prefs.Count));
+                if (coursesByCategory.TryGetValue(prefCatId, out var catCourses) && catCourses.Count > 0)
+                    courseIdx = catCourses[rng.Next(catCourses.Count)];
+                else
+                    courseIdx = rng.Next(courses.Count); // fallback
+            }
+            else
+            {
+                // 30% chance: weighted-random by subscribers (popularity)
+                var roll = (long)(rng.NextDouble() * totalSubs);
+                courseIdx = BinarySearchUpper(cum, roll);
+            }
+
+            var course = courses[courseIdx];
             if (!taken.Add((student.Id, course.Id))) continue;
 
-            // Pick a random enrollment date between the course's creation and the
-            // configured end date (default: today). This spreads enrollments over time
-            // so analytics charts and date-range filters show realistic data.
             var earliest = enrollFromOverride ?? course.CreatedAt;
             var latest = enrollTo;
-            if (earliest > latest) earliest = latest; // safety
+            if (earliest > latest) earliest = latest;
             var enrolledAt = RandomDateBetween(rng, earliest, latest);
 
-            enrollmentBatch.Add(new Enrollment
+            var enrollment = new Enrollment
             {
                 StudentId = student.Id,
                 CourseId = course.Id,
                 EnrolledAt = enrolledAt,
-            });
-            paymentBatch.Add(new Payment
+            };
+            var payment = new Payment
             {
                 StudentId = student.Id,
                 CourseId = course.Id,
                 Amount = course.Price,
                 Status = PaymentStatus.Completed,
                 CreatedAt = enrolledAt,
-            });
+            };
 
-            if (enrollmentBatch.Count >= chunkSize)
+            enrollmentList.Add((enrollment, payment));
+
+            if (enrollmentList.Count >= chunkSize)
             {
-                db.Enrollments.AddRange(enrollmentBatch);
-                db.Payments.AddRange(paymentBatch);
+                db.Enrollments.AddRange(enrollmentList.Select(x => x.e));
+                db.Payments.AddRange(enrollmentList.Select(x => x.p));
                 await db.SaveChangesAsync();
                 Console.Write($"\r  inserting enrollments... {taken.Count}/{targetEnrollments}");
-                enrollmentBatch.Clear();
-                paymentBatch.Clear();
+                enrollmentList.Clear();
             }
         }
-        if (enrollmentBatch.Count > 0)
+        if (enrollmentList.Count > 0)
         {
-            db.Enrollments.AddRange(enrollmentBatch);
-            db.Payments.AddRange(paymentBatch);
+            db.Enrollments.AddRange(enrollmentList.Select(x => x.e));
+            db.Payments.AddRange(enrollmentList.Select(x => x.p));
             await db.SaveChangesAsync();
         }
         Console.WriteLine();
         Console.WriteLine($"  ✓ {taken.Count} enrollments (and matching payments)");
 
+        // ---------- 7. lesson progress (random completion for each enrollment) ----------
+        Console.WriteLine("Generating lesson progress...");
+        // Build a courseId → lessonIds map
+        var lessonsByCourse = await db.Lessons
+            .GroupBy(l => l.CourseId)
+            .ToDictionaryAsync(g => g.Key, g => g.Select(l => l.Id).ToList());
+
+        var allEnrollments = await db.Enrollments.ToListAsync();
+        var progressBatch = new List<LessonProgress>();
+        var totalProgress = 0;
+
+        foreach (var enrollment in allEnrollments)
+        {
+            if (!lessonsByCourse.TryGetValue(enrollment.CourseId, out var lessonIds)) continue;
+            // Each student completes 0-100% of lessons (weighted toward partial: avg ~50%)
+            var completionRatio = rng.NextDouble() * rng.NextDouble() + rng.NextDouble() * 0.3;
+            completionRatio = Math.Min(1.0, completionRatio);
+            var lessonsToComplete = (int)(lessonIds.Count * completionRatio);
+
+            for (var i = 0; i < lessonsToComplete; i++)
+            {
+                var completedAt = RandomDateBetween(rng, enrollment.EnrolledAt, enrollTo);
+                progressBatch.Add(new LessonProgress
+                {
+                    EnrollmentId = enrollment.Id,
+                    LessonId = lessonIds[i],
+                    CompletedAt = completedAt,
+                });
+                totalProgress++;
+            }
+
+            if (progressBatch.Count >= chunkSize)
+            {
+                db.LessonProgress.AddRange(progressBatch);
+                await db.SaveChangesAsync();
+                Console.Write($"\r  inserting lesson progress... {totalProgress} so far");
+                progressBatch.Clear();
+            }
+        }
+        if (progressBatch.Count > 0)
+        {
+            db.LessonProgress.AddRange(progressBatch);
+            await db.SaveChangesAsync();
+        }
+        Console.WriteLine();
+        Console.WriteLine($"  ✓ {totalProgress} lesson progress records");
+        // Note: trigger trg_lesson_progress_recompute fires per row and updates
+        // enrollments.progress automatically.
+
+        // ---------- 8. teacher payouts (some random payout requests) ----------
+        Console.WriteLine("Generating teacher payouts...");
+        var payoutStatuses = new[] { PayoutStatus.Pending, PayoutStatus.Approved, PayoutStatus.Paid, PayoutStatus.Rejected };
+        var payoutBatch = new List<Payout>();
+        foreach (var teacher in teachers)
+        {
+            // Each teacher makes 0-3 payout requests
+            var payoutCount = rng.Next(0, 4);
+            for (var i = 0; i < payoutCount; i++)
+            {
+                var amount = Math.Round((decimal)(rng.NextDouble() * 200 + 10), 2); // $10-$210
+                var statusIdx = rng.Next(payoutStatuses.Length);
+                var requestedAt = RandomDateBetween(rng, enrollTo.AddMonths(-6), enrollTo);
+                payoutBatch.Add(new Payout
+                {
+                    TeacherId = teacher.Id,
+                    Amount = amount,
+                    Status = payoutStatuses[statusIdx],
+                    RequestedAt = requestedAt,
+                });
+            }
+        }
+        db.Payouts.AddRange(payoutBatch);
+        await db.SaveChangesAsync();
+        Console.WriteLine($"  ✓ {payoutBatch.Count} teacher payouts");
+        // The trg_payouts_balance trigger recomputes each teacher's balance.
+
         Console.WriteLine();
         Console.WriteLine("Done.");
         Console.WriteLine($"  Total records inserted (approx): " +
-                          $"{categories.Count + teachers.Count + students.Count + courses.Count + totalLessons + taken.Count}");
+                          $"{categories.Count + teachers.Count + students.Count + courses.Count + totalLessons + taken.Count + totalProgress + payoutBatch.Count}");
     }
 
     // ---- helpers ----
