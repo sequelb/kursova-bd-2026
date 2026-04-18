@@ -62,8 +62,8 @@ export function AdminOverview() {
     if (bucketDays === 1) {
       return rev.map((r, i) => ({
         label: labelFn(r.date),
-        revenue: r.amount,
-        payouts: pay[i]?.amount ?? 0,
+        revenue: Math.round(r.amount * 100) / 100,
+        payouts: Math.round((pay[i]?.amount ?? 0) * 100) / 100,
       }))
     }
     const buckets: { label: string; revenue: number; payouts: number }[] = []
