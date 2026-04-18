@@ -367,7 +367,59 @@ internal static partial class FullLoader
         // Note: trigger trg_lesson_progress_recompute fires per row and updates
         // enrollments.progress automatically.
 
-        // ---------- 8. teacher payouts (some random payout requests) ----------
+        // ---------- 8. reviews (random reviews from students who finished a course) ----------
+        Console.WriteLine("Generating reviews...");
+        var reviewComments = new[]
+        {
+            "Great course! Learned a lot and would recommend to anyone interested in this topic.",
+            "Good content but could use more practical examples.",
+            "Excellent! The instructor explains everything clearly.",
+            "Decent course. Some parts felt a bit rushed.",
+            "Very well structured. I particularly enjoyed the hands-on exercises.",
+            "Not bad, but I expected more depth on certain topics.",
+            "Outstanding quality. One of the best courses I've taken.",
+            "Solid course for beginners. More advanced students might find it too basic.",
+            "The material is good but the pacing could be better.",
+            "Highly recommend! Worth every penny.",
+            "Informative and engaging throughout.",
+            "A bit too theoretical for my taste, but still useful.",
+        };
+
+        // Only students with progress=100 can leave a review (matches our schema: review FK → enrollment).
+        // ~40% of completed enrollments leave a review.
+        var completedEnrollments = await db.Enrollments
+            .Where(e => e.Progress >= 100)
+            .ToListAsync();
+
+        var reviewBatch = new List<Review>();
+        foreach (var enrollment in completedEnrollments)
+        {
+            if (rng.NextDouble() > 0.4) continue; // 40% chance to review
+
+            // Bias grades: most reviews are 3-5, few are 1-2
+            var grade = rng.NextDouble() switch
+            {
+                < 0.05 => 1,
+                < 0.10 => 2,
+                < 0.25 => 3,
+                < 0.55 => 4,
+                _ => 5,
+            };
+
+            var reviewedAt = RandomDateBetween(rng, enrollment.EnrolledAt, enrollTo);
+            reviewBatch.Add(new Review
+            {
+                EnrollmentId = enrollment.Id,
+                Grade = grade,
+                Comment = reviewComments[rng.Next(reviewComments.Length)],
+                CreatedAt = reviewedAt,
+            });
+        }
+        db.Reviews.AddRange(reviewBatch);
+        await db.SaveChangesAsync();
+        Console.WriteLine($"  ✓ {reviewBatch.Count} reviews (from {completedEnrollments.Count} completed enrollments)");
+
+        // ---------- 9. teacher payouts (some random payout requests) ----------
         Console.WriteLine("Generating teacher payouts...");
         var payoutStatuses = new[] { PayoutStatus.Pending, PayoutStatus.Approved, PayoutStatus.Paid, PayoutStatus.Rejected };
         var payoutBatch = new List<Payout>();
@@ -397,7 +449,7 @@ internal static partial class FullLoader
         Console.WriteLine();
         Console.WriteLine("Done.");
         Console.WriteLine($"  Total records inserted (approx): " +
-                          $"{categories.Count + teachers.Count + students.Count + courses.Count + totalLessons + taken.Count + totalProgress + payoutBatch.Count}");
+                          $"{categories.Count + teachers.Count + students.Count + courses.Count + totalLessons + taken.Count + totalProgress + reviewBatch.Count + payoutBatch.Count}");
     }
 
     // ---- helpers ----
