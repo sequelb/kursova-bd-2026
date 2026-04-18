@@ -27,10 +27,10 @@ namespace LearningPlatform.DataLoader;
 /// </summary>
 internal static partial class FullLoader
 {
-    private const int TeacherCount = 80;
+    private const int TeacherCount = 300;
     private const int StudentCount = 500;
     private const int MaxLessonsPerCourse = 8;
-    private const int TargetEnrollmentCount = 5000;
+    private const int TargetEnrollmentCount = 20000;
 
     private static readonly string CsvPath = Path.Combine(
         AppContext.BaseDirectory, "data", "courses.csv");
