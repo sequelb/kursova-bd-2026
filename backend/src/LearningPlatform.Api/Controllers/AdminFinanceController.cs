@@ -27,8 +27,6 @@ public class AdminFinanceController(AppDbContext db) : ControllerBase
         var toExclusive = toDate.AddDays(1);
         // Cap the timeline length to avoid pathological responses
         var totalDays = (toExclusive - fromDate).Days;
-        if (totalDays > 366)
-            return BadRequest(new { error = "Date range must be 366 days or less." });
 
         var grossRevenue = await db.Payments
             .Where(p => p.Status == PaymentStatus.Completed

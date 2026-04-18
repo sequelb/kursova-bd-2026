@@ -57,26 +57,30 @@ public class TeacherAnalyticsController(AppDbContext db) : ControllerBase
     }
 
     [HttpGet("api/teacher/courses/{id:int}/enrollments-timeline")]
-    public async Task<ActionResult<List<TimelinePointDto>>> Timeline(int id, [FromQuery] int days = 30)
+    public async Task<ActionResult<List<TimelinePointDto>>> Timeline(
+        int id, [FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
         var teacherId = CurrentUserId;
         var owns = await db.Courses.AnyAsync(c => c.Id == id && c.AuthorId == teacherId);
         if (!owns) return NotFound();
 
-        var since = DateTime.UtcNow.Date.AddDays(-(days - 1));
+        var toDate = DateTime.SpecifyKind((to ?? DateTime.UtcNow).Date, DateTimeKind.Utc);
+        var fromDate = DateTime.SpecifyKind((from ?? toDate.AddDays(-29)).Date, DateTimeKind.Utc);
+        if (fromDate > toDate) return BadRequest(new { error = "'from' must be on or before 'to'." });
+        var toExclusive = toDate.AddDays(1);
+        var totalDays = (toExclusive - fromDate).Days;
 
         var rows = await db.Enrollments
-            .Where(e => e.CourseId == id && e.EnrolledAt >= since)
+            .Where(e => e.CourseId == id && e.EnrolledAt >= fromDate && e.EnrolledAt < toExclusive)
             .GroupBy(e => e.EnrolledAt.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .ToListAsync();
 
-        // Fill missing days with zero
         var byDate = rows.ToDictionary(r => r.Date, r => r.Count);
-        var result = new List<TimelinePointDto>(days);
-        for (var i = 0; i < days; i++)
+        var result = new List<TimelinePointDto>(totalDays);
+        for (var i = 0; i < totalDays; i++)
         {
-            var d = since.AddDays(i);
+            var d = fromDate.AddDays(i);
             result.Add(new TimelinePointDto(d, byDate.GetValueOrDefault(d, 0)));
         }
         return result;
