@@ -87,6 +87,21 @@ export type LessonContent = {
   content: string
 }
 
+export type RecommendedCourse = {
+  id: number
+  title: string
+  price: number
+  level: string
+  createdAt: string
+  author: Author
+  categories: Category[]
+  averageRating: number
+  reviewCount: number
+  enrollmentCount: number
+  score: number
+  reason: string
+}
+
 export type EnrollResult = { enrollmentId: number; firstLessonId: number | null }
 
 export type PagedResult<T> = {
@@ -185,6 +200,9 @@ export const api = {
     }),
   logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
   me: () => request<User>('/api/me'),
+
+  // ---- recommendations ----
+  getRecommendations: () => request<RecommendedCourse[]>('/api/me/recommendations'),
 
   // ---- catalog ----
   listCategories: () => request<Category[]>('/api/categories'),
