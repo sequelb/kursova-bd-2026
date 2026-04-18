@@ -13,23 +13,23 @@ namespace LearningPlatform.Api.Controllers;
 public class CoursesController(AppDbContext db) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<PagedResult<CourseListItemDto>>> List([FromQuery] CourseQuery q)
+    public async Task<ActionResult<PagedResult<CourseListItemDto>>> List([FromQuery] CourseQuery filters)
     {
         var query = db.Courses
             .Where(c => c.Status == CourseStatus.Published)
             .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(q.Q))
+        if (!string.IsNullOrWhiteSpace(filters.Q))
         {
-            var term = $"%{q.Q.Trim()}%";
+            var term = $"%{filters.Q.Trim()}%";
             query = query.Where(c => EF.Functions.ILike(c.Title, term));
         }
-        if (q.CategoryIds is { Length: > 0 })
-            query = query.Where(c => c.Categories.Any(cat => q.CategoryIds.Contains(cat.Id)));
-        if (q.MinPrice is not null) query = query.Where(c => c.Price >= q.MinPrice);
-        if (q.MaxPrice is not null) query = query.Where(c => c.Price <= q.MaxPrice);
-        if (q.CreatedAfter is not null) query = query.Where(c => c.CreatedAt >= q.CreatedAfter);
-        if (q.CreatedBefore is not null) query = query.Where(c => c.CreatedAt <= q.CreatedBefore);
+        if (filters.CategoryIds is { Length: > 0 })
+            query = query.Where(c => c.Categories.Any(cat => filters.CategoryIds.Contains(cat.Id)));
+        if (filters.MinPrice is not null) query = query.Where(c => c.Price >= filters.MinPrice);
+        if (filters.MaxPrice is not null) query = query.Where(c => c.Price <= filters.MaxPrice);
+        if (filters.CreatedAfter is not null) query = query.Where(c => c.CreatedAt >= filters.CreatedAfter);
+        if (filters.CreatedBefore is not null) query = query.Where(c => c.CreatedAt <= filters.CreatedBefore);
 
         // Project with rating so we can filter/sort on it.
         var projected = query.Select(c => new
@@ -42,10 +42,10 @@ public class CoursesController(AppDbContext db) : ControllerBase
             EnrollmentCount = db.Enrollments.Count(e => e.CourseId == c.Id),
         });
 
-        if (q.MinRating is not null) projected = projected.Where(p => p.AverageRating >= q.MinRating);
-        if (q.MaxRating is not null) projected = projected.Where(p => p.AverageRating <= q.MaxRating);
+        if (filters.MinRating is not null) projected = projected.Where(p => p.AverageRating >= filters.MinRating);
+        if (filters.MaxRating is not null) projected = projected.Where(p => p.AverageRating <= filters.MaxRating);
 
-        projected = q.Sort switch
+        projected = filters.Sort switch
         {
             "oldest" => projected.OrderBy(p => p.Course.CreatedAt),
             "price_asc" => projected.OrderBy(p => p.Course.Price),
@@ -54,8 +54,8 @@ public class CoursesController(AppDbContext db) : ControllerBase
             _ => projected.OrderByDescending(p => p.Course.CreatedAt), // newest (default)
         };
 
-        var page = Math.Max(1, q.Page);
-        var pageSize = Math.Clamp(q.PageSize, 1, 100);
+        var page = Math.Max(1, filters.Page);
+        var pageSize = Math.Clamp(filters.PageSize, 1, 100);
         var totalCount = await projected.CountAsync();
 
         var rows = await projected

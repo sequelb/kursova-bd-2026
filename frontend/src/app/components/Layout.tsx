@@ -12,7 +12,7 @@ import {
   IdCard,
 } from 'lucide-react'
 import { Link, useLocation, Outlet, useNavigate } from 'react-router'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../lib/auth'
 import type { Role } from '../../lib/api'
 
@@ -69,6 +69,21 @@ export function Layout() {
   const portalTitle = portalTitleForRole(user.role)
   const [searchValue, setSearchValue] = useState('')
 
+  // Close user menu when clicking outside
+  const userMenuRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!showUserMenu) return
+    function handleClickOutside(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node))
+        setShowUserMenu(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showUserMenu])
+
+  // Only show search bar on pages where it makes sense (Catalog, course browsing)
+  const showSearch = user.role !== 'Admin' && location.pathname !== '/my-learning'
+
   async function handleLogout() {
     await logout()
     navigate('/login', { replace: true })
@@ -116,7 +131,7 @@ export function Layout() {
         {/* Top Header */}
         <header className="border-b-2 border-gray-800 bg-gray-100 p-4">
           <div className="flex items-center gap-4">
-            {user.role !== 'Admin' && (
+            {showSearch ? (
               <form onSubmit={handleSearchSubmit} className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
@@ -127,10 +142,11 @@ export function Layout() {
                   className="w-full pl-10 pr-4 py-2 border-2 border-gray-800 bg-white"
                 />
               </form>
+            ) : (
+              <div className="flex-1" />
             )}
-            {user.role === 'Admin' && <div className="flex-1" />}
 
-            <div className="relative">
+            <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-2 px-3 h-10 border-2 border-gray-800 bg-gray-300 hover:bg-gray-400 transition-colors cursor-pointer"
@@ -142,9 +158,9 @@ export function Layout() {
               </button>
 
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-56 border-2 border-gray-800 bg-white shadow-lg z-50">
-                  <div className="p-3 border-b-2 border-gray-400 bg-gray-100">
-                    <div className="text-sm font-bold text-gray-900">{user.email}</div>
+                <div className="absolute right-0 mt-2 w-64 border-2 border-gray-800 bg-white shadow-lg z-50">
+                  <div className="p-3 border-b-2 border-gray-400 bg-gray-100 overflow-hidden">
+                    <div className="text-sm font-bold text-gray-900 truncate">{user.email}</div>
                     <div className="text-xs text-gray-600">{user.role}</div>
                   </div>
                   <button
