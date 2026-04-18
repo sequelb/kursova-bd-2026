@@ -20,6 +20,7 @@ public record AdminPaymentDto(
     DateTime CreatedAt,
     int StudentId,
     string StudentName,
+    string StudentEmail,
     int CourseId,
     string CourseTitle,
     decimal Amount,
@@ -32,6 +33,7 @@ public record AdminPayoutDto(
     DateTime RequestedAt,
     int TeacherId,
     string TeacherName,
+    string TeacherEmail,
     decimal Amount,
     string Status);
 

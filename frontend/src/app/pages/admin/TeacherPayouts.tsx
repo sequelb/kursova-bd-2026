@@ -90,7 +90,10 @@ export function TeacherPayouts() {
                   <td className="p-3 text-gray-700">
                     {new Date(p.requestedAt).toISOString().slice(0, 10)}
                   </td>
-                  <td className="p-3 text-gray-900">{p.teacherName}</td>
+                  <td className="p-3">
+                    <div className="text-gray-900">{p.teacherName}</div>
+                    <div className="text-xs text-gray-500">{p.teacherEmail}</div>
+                  </td>
                   <td className="p-3 text-gray-900 font-bold">${p.amount.toFixed(2)}</td>
                   <td className="p-3">
                     <span

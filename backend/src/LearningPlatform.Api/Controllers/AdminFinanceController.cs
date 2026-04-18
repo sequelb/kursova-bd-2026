@@ -115,6 +115,7 @@ public class AdminFinanceController(AppDbContext db) : ControllerBase
                 p.CreatedAt,
                 p.StudentId,
                 p.Student!.FirstName + " " + p.Student.LastName,
+                p.Student.Email,
                 p.CourseId,
                 p.Course!.Title,
                 p.Amount,

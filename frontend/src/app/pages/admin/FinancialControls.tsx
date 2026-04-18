@@ -87,7 +87,10 @@ export function FinancialControls() {
                   <td className="p-3 text-gray-700">
                     {new Date(p.createdAt).toISOString().slice(0, 10)}
                   </td>
-                  <td className="p-3 text-gray-900">{p.studentName}</td>
+                  <td className="p-3">
+                    <div className="text-gray-900">{p.studentName}</div>
+                    <div className="text-xs text-gray-500">{p.studentEmail}</div>
+                  </td>
                   <td className="p-3 text-gray-900">{p.courseTitle}</td>
                   <td className="p-3 text-gray-900 font-bold">${p.amount.toFixed(2)}</td>
                   <td className="p-3">

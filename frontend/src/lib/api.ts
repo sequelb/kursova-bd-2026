@@ -355,6 +355,7 @@ export type AdminPayment = {
   createdAt: string
   studentId: number
   studentName: string
+  studentEmail: string
   courseId: number
   courseTitle: string
   amount: number
@@ -366,6 +367,7 @@ export type AdminPayout = {
   requestedAt: string
   teacherId: number
   teacherName: string
+  teacherEmail: string
   amount: number
   status: 'Pending' | 'Approved' | 'Rejected' | 'Paid'
 }

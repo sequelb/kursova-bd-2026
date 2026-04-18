@@ -33,6 +33,7 @@ public class AdminPayoutsController(AppDbContext db) : ControllerBase
                 p.RequestedAt,
                 p.TeacherId,
                 p.Teacher!.User!.FirstName + " " + p.Teacher.User.LastName,
+                p.Teacher.User.Email,
                 p.Amount,
                 p.Status))
             .ToListAsync();
