@@ -41,6 +41,20 @@ public record CourseDetailDto(
     double AverageRating,
     int EnrollmentCount);
 
+public record RecommendedCourseDto(
+    int Id,
+    string Title,
+    decimal Price,
+    string Level,
+    DateTime CreatedAt,
+    AuthorDto Author,
+    List<CategoryDto> Categories,
+    double AverageRating,
+    int ReviewCount,
+    int EnrollmentCount,
+    double Score,
+    string Reason);
+
 public record CourseQuery(
     string? Q,
     int[]? CategoryIds,

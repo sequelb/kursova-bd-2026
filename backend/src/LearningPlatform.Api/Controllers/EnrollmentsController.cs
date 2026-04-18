@@ -14,6 +14,60 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
 {
     private int CurrentUserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
+    [HttpGet("api/me/recommendations")]
+    public async Task<ActionResult<List<RecommendedCourseDto>>> Recommendations()
+    {
+        var studentId = CurrentUserId;
+
+        // Call the SQL function
+        var rawResults = await db.Database
+            .SqlQuery<RawRecommendation>($"SELECT * FROM get_recommendations({studentId}, 6)")
+            .ToListAsync();
+
+        if (rawResults.Count == 0) return new List<RecommendedCourseDto>();
+
+        var courseIds = rawResults.Select(r => r.course_id).ToList();
+        var reasonMap = rawResults.ToDictionary(r => r.course_id, r => (r.score, r.reason));
+
+        // Hydrate full course details for each recommended course
+        var courses = await db.Courses
+            .Where(c => courseIds.Contains(c.Id))
+            .Include(c => c.Author!).ThenInclude(a => a.User)
+            .Include(c => c.Categories)
+            .ToListAsync();
+
+        var result = new List<RecommendedCourseDto>();
+        foreach (var rec in rawResults)
+        {
+            var c = courses.FirstOrDefault(c => c.Id == rec.course_id);
+            if (c is null) continue;
+
+            var avgRating = await db.Reviews
+                .Where(r => r.Enrollment!.CourseId == c.Id)
+                .Select(r => (double?)r.Grade)
+                .AverageAsync() ?? 0d;
+            var reviewCount = await db.Reviews.CountAsync(r => r.Enrollment!.CourseId == c.Id);
+            var enrollmentCount = await db.Enrollments.CountAsync(e => e.CourseId == c.Id);
+
+            result.Add(new RecommendedCourseDto(
+                c.Id, c.Title, c.Price, c.Level, c.CreatedAt,
+                new AuthorDto(c.Author!.UserId, c.Author.User!.FirstName, c.Author.User.LastName),
+                c.Categories.Select(cat => new CategoryDto(cat.Id, cat.Name)).ToList(),
+                avgRating, reviewCount, enrollmentCount,
+                (double)rec.score, rec.reason));
+        }
+
+        return result;
+    }
+
+    // Raw result shape from the SQL function
+    private class RawRecommendation
+    {
+        public int course_id { get; set; }
+        public decimal score { get; set; }
+        public string reason { get; set; } = "";
+    }
+
     [HttpGet("api/me/enrollments")]
     public async Task<ActionResult<List<EnrollmentListItemDto>>> List()
     {
