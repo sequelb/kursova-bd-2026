@@ -256,8 +256,13 @@ export const api = {
   // ---- teacher: analytics & reviews ----
   getCourseAnalytics: (id: number) =>
     request<CourseAnalytics>(`/api/teacher/courses/${id}/analytics`),
-  getEnrollmentsTimeline: (id: number, days = 30) =>
-    request<TimelinePoint[]>(`/api/teacher/courses/${id}/enrollments-timeline?days=${days}`),
+  getEnrollmentsTimeline: (id: number, from?: string, to?: string) => {
+    const params = new URLSearchParams()
+    if (from) params.set('from', from)
+    if (to) params.set('to', to)
+    const qs = params.toString()
+    return request<TimelinePoint[]>(`/api/teacher/courses/${id}/enrollments-timeline${qs ? '?' + qs : ''}`)
+  },
   listMyTeacherReviews: (courseId?: number, page = 1, pageSize = 20) => {
     const params = new URLSearchParams()
     if (courseId != null) params.set('courseId', String(courseId))

@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
 import {
   CartesianGrid,
   Line,
@@ -12,9 +13,31 @@ import {
 } from 'recharts'
 import { api } from '../../../lib/api'
 
+function isoDate(d: Date) {
+  return d.toISOString().slice(0, 10)
+}
+function daysAgo(n: number) {
+  const d = new Date()
+  d.setUTCHours(0, 0, 0, 0)
+  d.setUTCDate(d.getUTCDate() - n)
+  return isoDate(d)
+}
+function today() {
+  return isoDate(new Date())
+}
+
+const PRESETS = [
+  { label: 'Last 7 days', from: () => daysAgo(6), to: today },
+  { label: 'Last 30 days', from: () => daysAgo(29), to: today },
+  { label: 'Last 90 days', from: () => daysAgo(89), to: today },
+  { label: 'Last 365 days', from: () => daysAgo(364), to: today },
+]
+
 export function CourseAnalytics() {
   const { id } = useParams<{ id: string }>()
   const courseId = Number(id)
+  const [from, setFrom] = useState(daysAgo(29))
+  const [to, setTo] = useState(today())
 
   const analytics = useQuery({
     queryKey: ['course-analytics', courseId],
@@ -22,10 +45,34 @@ export function CourseAnalytics() {
     enabled: Number.isFinite(courseId),
   })
   const timeline = useQuery({
-    queryKey: ['enrollments-timeline', courseId, 30],
-    queryFn: () => api.getEnrollmentsTimeline(courseId, 30),
+    queryKey: ['enrollments-timeline', courseId, from, to],
+    queryFn: () => api.getEnrollmentsTimeline(courseId, from, to),
     enabled: Number.isFinite(courseId),
   })
+
+  const chartData = useMemo(() => {
+    if (!timeline.data) return []
+    const points = timeline.data
+    const days = points.length
+    const bucketDays = days <= 60 ? 1 : days <= 365 ? 7 : 30
+    const labelFn = (dateStr: string) =>
+      bucketDays >= 30 ? dateStr.slice(0, 7) : dateStr.slice(5, 10)
+
+    if (bucketDays === 1) {
+      return points.map((p) => ({
+        label: labelFn(p.date),
+        enrollments: p.count,
+      }))
+    }
+    const buckets: { label: string; enrollments: number }[] = []
+    for (let i = 0; i < days; i += bucketDays) {
+      let sum = 0
+      const end = Math.min(i + bucketDays, days)
+      for (let j = i; j < end; j++) sum += points[j].count
+      buckets.push({ label: labelFn(points[i].date), enrollments: sum })
+    }
+    return buckets
+  }, [timeline.data])
 
   if (analytics.isPending) return <div className="p-8 text-gray-600">Loading…</div>
   if (analytics.error) {
@@ -34,11 +81,6 @@ export function CourseAnalytics() {
   if (!analytics.data) return null
 
   const a = analytics.data
-
-  const chartData = (timeline.data ?? []).map((p) => ({
-    date: new Date(p.date).toISOString().slice(5, 10), // MM-DD
-    enrollments: p.count,
-  }))
 
   return (
     <div className="p-8">
@@ -79,10 +121,39 @@ export function CourseAnalytics() {
         </div>
       </div>
 
-      {/* Timeline chart */}
+      {/* Date range picker + chart */}
       <div className="border-2 border-gray-800 bg-white mb-8">
-        <div className="border-b-2 border-gray-800 bg-gray-100 p-4 font-bold text-gray-900">
-          Enrollments (Last 30 Days)
+        <div className="border-b-2 border-gray-800 bg-gray-100 p-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="font-bold text-gray-900">Enrollments</span>
+            <input
+              type="date"
+              value={from}
+              max={to}
+              onChange={(e) => setFrom(e.target.value)}
+              className="px-3 py-1 border-2 border-gray-800 bg-white text-sm"
+            />
+            <span className="text-gray-700">—</span>
+            <input
+              type="date"
+              value={to}
+              min={from}
+              max={today()}
+              onChange={(e) => setTo(e.target.value)}
+              className="px-3 py-1 border-2 border-gray-800 bg-white text-sm"
+            />
+            <div className="ml-auto flex items-center gap-2">
+              {PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  onClick={() => { setFrom(p.from()); setTo(p.to()) }}
+                  className="px-3 py-1 border-2 border-gray-400 bg-white text-gray-900 hover:bg-gray-200 text-xs transition-colors"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
         <div className="p-4 h-72">
           {timeline.isPending && <p className="text-gray-600">Loading chart…</p>}
@@ -90,7 +161,12 @@ export function CourseAnalytics() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#9ca3af" />
-                <XAxis dataKey="date" stroke="#374151" />
+                <XAxis
+                  dataKey="label"
+                  stroke="#374151"
+                  tick={{ fontSize: 11 }}
+                  interval={Math.max(0, Math.floor(chartData.length / 15))}
+                />
                 <YAxis allowDecimals={false} stroke="#374151" />
                 <Tooltip />
                 <Line

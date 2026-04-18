@@ -52,9 +52,13 @@ export function AdminOverview() {
     // Pick a bucket size based on range length so the chart never has too many points.
     // ≤60 days → daily, ≤365 days → weekly (7), >365 days → monthly (~30).
     const bucketDays = days <= 60 ? 1 : days <= 365 ? 7 : 30
+    // For ranges > 1 year, show YYYY-MM; for shorter ranges, MM-DD is enough.
+    const labelFn = (dateStr: string) =>
+      bucketDays >= 30 ? dateStr.slice(0, 7) : dateStr.slice(5, 10)
+
     if (bucketDays === 1) {
       return rev.map((r, i) => ({
-        label: r.date.slice(5, 10),
+        label: labelFn(r.date),
         revenue: r.amount,
         payouts: pay[i]?.amount ?? 0,
       }))
@@ -68,11 +72,10 @@ export function AdminOverview() {
         revSum += rev[j].amount
         paySum += pay[j]?.amount ?? 0
       }
-      // Use the bucket's first day as its label
       buckets.push({
-        label: rev[i].date.slice(5, 10),
-        revenue: revSum,
-        payouts: paySum,
+        label: labelFn(rev[i].date),
+        revenue: Math.round(revSum * 100) / 100,
+        payouts: Math.round(paySum * 100) / 100,
       })
     }
     return buckets
@@ -168,7 +171,12 @@ export function AdminOverview() {
                   margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#9ca3af" />
-                  <XAxis dataKey="label" stroke="#374151" />
+                  <XAxis
+                    dataKey="label"
+                    stroke="#374151"
+                    tick={{ fontSize: 11 }}
+                    interval={Math.max(0, Math.floor(chartData.length / 15))}
+                  />
                   <YAxis stroke="#374151" />
                   <Tooltip />
                   <Legend />
