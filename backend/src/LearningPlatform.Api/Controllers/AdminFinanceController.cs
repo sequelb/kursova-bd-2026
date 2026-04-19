@@ -21,7 +21,7 @@ public class AdminFinanceController(AppDbContext db) : ControllerBase
         // strip whatever kind the model binder produced and re-stamp it as UTC.
         var toDate = DateTime.SpecifyKind((to ?? DateTime.UtcNow).Date, DateTimeKind.Utc);
         var fromDate = DateTime.SpecifyKind((from ?? toDate.AddDays(-29)).Date, DateTimeKind.Utc);
-        if (fromDate > toDate) return BadRequest(new { error = "'from' must be on or before 'to'." });
+        if (fromDate > toDate) return BadRequest(new { error = "Start date cannot be after end date." });
 
         // For "≤ to" inclusive comparisons we want < (to + 1 day)
         var toExclusive = toDate.AddDays(1);
