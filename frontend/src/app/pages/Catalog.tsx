@@ -180,7 +180,7 @@ export function Catalog() {
 
         {courses.isPending && <p className="text-gray-600">Loading…</p>}
         {courses.error && (
-          <p className="text-red-700">Failed to load courses: {(courses.error as Error).message}</p>
+          <div className="border-2 border-red-700 bg-red-50 p-3 text-sm text-red-700">Failed to load courses: {(courses.error as Error).message}</div>
         )}
         {courses.data && courses.data.items.length === 0 && (
           <p className="text-gray-600">No courses match your filters.</p>

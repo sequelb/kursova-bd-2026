@@ -43,7 +43,7 @@ export function StudentReviews() {
 
       {reviews.isPending && <p className="text-gray-600">Loading…</p>}
       {reviews.error && (
-        <p className="text-red-700">Failed: {(reviews.error as Error).message}</p>
+        <div className="border-2 border-red-700 bg-red-50 p-3 text-sm text-red-700">Failed: {(reviews.error as Error).message}</div>
       )}
       {reviews.data && reviews.data.items.length === 0 && (
         <div className="border-2 border-gray-400 bg-white p-8 text-center text-gray-600">

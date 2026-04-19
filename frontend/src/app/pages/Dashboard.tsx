@@ -40,9 +40,9 @@ export function Dashboard() {
 
         {enrollments.isPending && <p className="text-gray-600">Loading…</p>}
         {enrollments.error && (
-          <p className="text-red-700">
+          <div className="border-2 border-red-700 bg-red-50 p-3 text-sm text-red-700">
             Failed to load: {(enrollments.error as Error).message}
-          </p>
+          </div>
         )}
         {enrollments.data && enrollments.data.length === 0 && (
           <div className="border-2 border-gray-400 bg-white p-8 text-center text-gray-600">
@@ -113,9 +113,9 @@ export function Dashboard() {
 
         {recommendations.isPending && <p className="text-gray-600">Loading…</p>}
         {recommendations.error && (
-          <p className="text-red-700">
+          <div className="border-2 border-red-700 bg-red-50 p-3 text-sm text-red-700">
             Failed: {(recommendations.error as Error).message}
-          </p>
+          </div>
         )}
         {recommendations.data && recommendations.data.length === 0 && (
           <div className="border-2 border-gray-400 bg-white p-8 text-center text-gray-600">

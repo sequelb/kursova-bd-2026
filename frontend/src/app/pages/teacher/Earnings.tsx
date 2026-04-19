@@ -3,10 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type PayoutHistoryItem } from '../../../lib/api'
 
 const statusBadge: Record<PayoutHistoryItem['status'], string> = {
-  Pending: 'bg-white text-gray-900',
-  Approved: 'bg-gray-200 text-gray-900',
+  Pending: 'bg-gray-100 text-gray-800',
+  Approved: 'bg-gray-300 text-gray-900',
   Paid: 'bg-gray-900 text-white',
-  Rejected: 'bg-red-100 text-red-700 border-red-700',
+  Rejected: 'bg-red-100 text-red-700',
 }
 
 export function Earnings() {
@@ -149,7 +149,7 @@ export function Earnings() {
                   <td className="p-3 text-gray-900 font-bold">${p.amount.toFixed(2)}</td>
                   <td className="p-3">
                     <span
-                      className={`px-2 py-1 border-2 border-gray-800 text-xs font-bold ${statusBadge[p.status]}`}
+                      className={`inline-block px-3 py-1 text-xs font-bold ${statusBadge[p.status]}`}
                     >
                       {p.status}
                     </span>
