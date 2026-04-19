@@ -183,6 +183,8 @@ export function CourseEditor() {
             <input
               value={form.title}
               onChange={(e) => patch('title', e.target.value)}
+              required
+              maxLength={200}
               className="w-full mt-1 px-3 py-2 border-2 border-gray-800 bg-white"
             />
           </label>
@@ -192,6 +194,8 @@ export function CourseEditor() {
             <textarea
               value={form.description}
               onChange={(e) => patch('description', e.target.value)}
+              required
+              maxLength={4000}
               rows={5}
               className="w-full mt-1 px-3 py-2 border-2 border-gray-800 bg-white"
             />
@@ -203,6 +207,7 @@ export function CourseEditor() {
               <input
                 type="number"
                 min={0}
+                max={9999}
                 step="0.01"
                 value={form.price}
                 onChange={(e) => patch('price', Number(e.target.value))}
@@ -241,7 +246,7 @@ export function CourseEditor() {
         <div className="mt-6 flex items-center gap-2">
           <button
             onClick={() => save.mutate()}
-            disabled={!dirty || save.isPending || !form.title.trim()}
+            disabled={!dirty || save.isPending || !form.title.trim() || !form.description.trim()}
             className="px-6 py-2 border-2 border-gray-800 bg-gray-900 text-white hover:bg-gray-700 transition-colors disabled:opacity-50"
           >
             {save.isPending ? 'Saving…' : isNew ? 'Create course' : 'Save changes'}
@@ -461,6 +466,8 @@ function LessonForm({
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          required
+          maxLength={200}
           className="w-full mt-1 px-3 py-2 border-2 border-gray-800 bg-white"
           autoFocus
         />
@@ -470,6 +477,8 @@ function LessonForm({
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
+          required
+          maxLength={50000}
           rows={6}
           className="w-full mt-1 px-3 py-2 border-2 border-gray-800 bg-white"
         />
@@ -477,7 +486,7 @@ function LessonForm({
       <div className="flex items-center gap-2">
         <button
           onClick={handleSubmit}
-          disabled={submitting || !title.trim()}
+          disabled={submitting || !title.trim() || !content.trim()}
           className="px-6 py-2 border-2 border-gray-800 bg-gray-900 text-white hover:bg-gray-700 transition-colors disabled:opacity-50"
         >
           {submitting ? 'Saving…' : submitLabel}

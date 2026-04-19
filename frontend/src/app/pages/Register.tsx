@@ -48,6 +48,7 @@ export function Register() {
               value={form.firstName}
               onChange={(e) => set('firstName', e.target.value)}
               required
+              maxLength={100}
               className="w-full mt-1 px-3 py-2 border-2 border-gray-800 bg-white"
             />
           </label>
@@ -57,6 +58,7 @@ export function Register() {
               value={form.lastName}
               onChange={(e) => set('lastName', e.target.value)}
               required
+              maxLength={100}
               className="w-full mt-1 px-3 py-2 border-2 border-gray-800 bg-white"
             />
           </label>
@@ -69,6 +71,7 @@ export function Register() {
             value={form.email}
             onChange={(e) => set('email', e.target.value)}
             required
+            maxLength={255}
             className="w-full mt-1 px-3 py-2 border-2 border-gray-800 bg-white"
           />
         </label>
@@ -81,6 +84,7 @@ export function Register() {
             onChange={(e) => set('password', e.target.value)}
             required
             minLength={6}
+            maxLength={100}
             className="w-full mt-1 px-3 py-2 border-2 border-gray-800 bg-white"
           />
         </label>

@@ -240,6 +240,7 @@ export function CourseDetails() {
                     <textarea
                       value={reviewComment}
                       onChange={(ev) => setReviewComment(ev.target.value)}
+                      maxLength={2000}
                       rows={4}
                       className="w-full px-3 py-2 border-2 border-gray-800 bg-white"
                     />

@@ -77,6 +77,7 @@ export function TeacherProfile() {
               setBio(e.target.value)
               setDirty(true)
             }}
+            maxLength={2000}
             rows={6}
             className="w-full px-3 py-2 border-2 border-gray-800 bg-white"
             placeholder="Tell students about yourself…"
