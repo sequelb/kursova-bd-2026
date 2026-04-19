@@ -152,6 +152,22 @@ public class TeacherCoursesController(AppDbContext db) : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("api/teacher/courses/{id:int}/unpublish")]
+    public async Task<IActionResult> Unpublish(int id)
+    {
+        var teacherId = CurrentUserId;
+        var course = await db.Courses
+            .SingleOrDefaultAsync(c => c.Id == id && c.AuthorId == teacherId);
+        if (course is null) return NotFound();
+
+        if (course.Status != CourseStatus.Published)
+            return BadRequest(new { error = "Course is not published." });
+
+        course.Status = CourseStatus.Draft;
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
     // ---- lessons ----
 
     [HttpPost("api/teacher/courses/{courseId:int}/lessons")]
