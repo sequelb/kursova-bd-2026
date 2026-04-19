@@ -126,10 +126,10 @@ export function LessonPlayer() {
                   <div className="font-bold text-gray-900">
                     {e.myReview ? 'Course finished — view your review' : 'Course finished!'}
                   </div>
+                  {e.myReview
+                    ? 'Open the course page to read or edit your review.'
+                    : 'Head to the course page to leave a review.'}
                   <div className="text-sm text-gray-700">
-                    {e.myReview
-                      ? 'Open the course page to read or edit your review.'
-                      : 'Head to the course page to leave a review.'}
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-700 ml-auto" />
@@ -158,11 +158,10 @@ export function LessonPlayer() {
                   <Link
                     key={x.id}
                     to={`/learn/${enrollmentId}/${x.id}`}
-                    className={`flex items-center gap-3 p-4 transition-colors ${
-                      isCurrent
-                        ? 'bg-gray-200 border-l-4 border-l-gray-900'
-                        : 'hover:bg-gray-50'
-                    } ${index < sortedLessons.length - 1 ? 'border-b-2 border-gray-400' : ''}`}
+                    className={`flex items-center gap-3 p-4 transition-colors ${isCurrent
+                      ? 'bg-gray-200 border-l-4 border-l-gray-900'
+                      : 'hover:bg-gray-50'
+                      } ${index < sortedLessons.length - 1 ? 'border-b-2 border-gray-400' : ''}`}
                   >
                     <div className="flex-shrink-0">
                       {done ? (

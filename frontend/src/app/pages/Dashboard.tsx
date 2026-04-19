@@ -10,11 +10,10 @@ function renderStars(rating: number) {
     stars.push(
       <Star
         key={i}
-        className={`w-4 h-4 ${
-          i <= Math.round(rating)
+        className={`w-4 h-4 ${i <= Math.round(rating)
             ? 'fill-gray-900 text-gray-900'
             : 'fill-gray-400 text-gray-400'
-        }`}
+          }`}
       />,
     )
   }
@@ -164,6 +163,9 @@ export function Dashboard() {
                   >
                     {course.author.firstName} {course.author.lastName}
                   </Link>
+                </p>
+                <p className="text-sm text-gray-600 mb-2">
+                  Published: {new Date(course.createdAt).toISOString().slice(0, 10)}
                 </p>
                 <p className="font-bold text-gray-900 mb-4">${course.price.toFixed(2)}</p>
                 <Link
