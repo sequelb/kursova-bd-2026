@@ -130,13 +130,13 @@ export function Earnings() {
         {e.history.length === 0 ? (
           <div className="p-4 text-gray-600">No payout requests yet.</div>
         ) : (
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead>
               <tr className="border-b-2 border-gray-400 bg-gray-50">
-                <th className="text-left p-3 font-bold text-gray-900">Payout ID</th>
-                <th className="text-left p-3 font-bold text-gray-900">Date</th>
-                <th className="text-left p-3 font-bold text-gray-900">Amount</th>
-                <th className="text-left p-3 font-bold text-gray-900">Status</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[25%]">Payout ID</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[25%]">Date</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[25%]">Amount</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[25%]">Status</th>
               </tr>
             </thead>
             <tbody>

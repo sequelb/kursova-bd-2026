@@ -89,15 +89,15 @@ export function UserManagement() {
 
       {users.data && users.data.items.length > 0 && (
         <div className="border-2 border-gray-800 bg-white">
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead>
               <tr className="border-b-2 border-gray-400 bg-gray-50">
-                <th className="text-left p-3 font-bold text-gray-900">User ID</th>
-                <th className="text-left p-3 font-bold text-gray-900">Name</th>
-                <th className="text-left p-3 font-bold text-gray-900">Email</th>
-                <th className="text-left p-3 font-bold text-gray-900">Role</th>
-                <th className="text-left p-3 font-bold text-gray-900">Status</th>
-                <th className="text-left p-3 font-bold text-gray-900">Actions</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[10%]">User ID</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[18%]">Name</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[30%]">Email</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[10%]">Role</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[12%]">Status</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[20%]">Actions</th>
               </tr>
             </thead>
             <tbody>

@@ -68,16 +68,16 @@ export function FinancialControls() {
 
       {payments.data && payments.data.items.length > 0 && (
         <div className="border-2 border-gray-800 bg-white">
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead>
               <tr className="border-b-2 border-gray-400 bg-gray-50">
-                <th className="text-left p-3 font-bold text-gray-900">ID</th>
-                <th className="text-left p-3 font-bold text-gray-900">Date</th>
-                <th className="text-left p-3 font-bold text-gray-900">Student</th>
-                <th className="text-left p-3 font-bold text-gray-900">Course</th>
-                <th className="text-left p-3 font-bold text-gray-900">Amount</th>
-                <th className="text-left p-3 font-bold text-gray-900">Status</th>
-                <th className="text-left p-3 font-bold text-gray-900">Action</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[10%]">ID</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[10%]">Date</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[18%]">Student</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[27%]">Course</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[9%]">Amount</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[11%]">Status</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[15%]">Action</th>
               </tr>
             </thead>
             <tbody>

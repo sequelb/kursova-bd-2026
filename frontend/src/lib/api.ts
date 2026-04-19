@@ -330,9 +330,10 @@ export const api = {
     request<void>(`/api/admin/payments/${id}/refund`, { method: 'POST' }),
 
   // ---- admin: payouts ----
-  listAdminPayouts: (status?: string, page = 1, pageSize = 20) => {
+  listAdminPayouts: (status?: string, q?: string, page = 1, pageSize = 20) => {
     const params = new URLSearchParams()
     if (status) params.set('status', status)
+    if (q) params.set('q', q)
     params.set('page', String(page))
     params.set('pageSize', String(pageSize))
     return request<PagedResult<AdminPayout>>(`/api/admin/payouts?${params}`)

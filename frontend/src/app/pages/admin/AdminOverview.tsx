@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { useDebounce } from '../../../lib/useDebounce'
 import {
   CartesianGrid,
   Legend,
@@ -13,38 +12,14 @@ import {
   YAxis,
 } from 'recharts'
 import { api } from '../../../lib/api'
-
-function isoDate(d: Date) {
-  return d.toISOString().slice(0, 10)
-}
-
-function daysAgo(n: number) {
-  const d = new Date()
-  d.setUTCHours(0, 0, 0, 0)
-  d.setUTCDate(d.getUTCDate() - n)
-  return isoDate(d)
-}
-
-function today() {
-  return isoDate(new Date())
-}
-
-const PRESETS: { label: string; from: () => string; to: () => string }[] = [
-  { label: 'Last 7 days', from: () => daysAgo(6), to: today },
-  { label: 'Last 30 days', from: () => daysAgo(29), to: today },
-  { label: 'Last 90 days', from: () => daysAgo(89), to: today },
-  { label: 'Last 365 days', from: () => daysAgo(364), to: today },
-]
+import { DateRangePicker, useDateRange } from '../../components/DateRangePicker'
 
 export function AdminOverview() {
-  const [from, setFrom] = useState(daysAgo(29))
-  const [to, setTo] = useState(today())
-  const debouncedFrom = useDebounce(from)
-  const debouncedTo = useDebounce(to)
+  const range = useDateRange()
 
   const dashboard = useQuery({
-    queryKey: ['admin-finance-dashboard', debouncedFrom, debouncedTo],
-    queryFn: () => api.getAdminFinanceDashboard(debouncedFrom, debouncedTo),
+    queryKey: ['admin-finance-dashboard', range.debouncedFrom, range.debouncedTo],
+    queryFn: () => api.getAdminFinanceDashboard(range.debouncedFrom, range.debouncedTo),
   })
 
   const chartData = useMemo(() => {
@@ -92,37 +67,7 @@ export function AdminOverview() {
       <div className="border-2 border-gray-800 bg-white p-4 mb-6">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-sm font-bold text-gray-900">Date range:</span>
-          <input
-            type="date"
-            value={from}
-            min="2010-01-01"
-            max={to}
-            onChange={(e) => { if (e.target.value >= '2010-01-01') setFrom(e.target.value) }}
-            className="px-3 py-2 border-2 border-gray-800 bg-white"
-          />
-          <span className="text-gray-700">—</span>
-          <input
-            type="date"
-            value={to}
-            min={from}
-            max={today()}
-            onChange={(e) => { if (e.target.value >= '2010-01-01') setTo(e.target.value) }}
-            className="px-3 py-2 border-2 border-gray-800 bg-white"
-          />
-          <div className="ml-auto flex items-center gap-2">
-            {PRESETS.map((p) => (
-              <button
-                key={p.label}
-                onClick={() => {
-                  setFrom(p.from())
-                  setTo(p.to())
-                }}
-                className="px-3 py-1 border-2 border-gray-400 bg-white text-gray-900 hover:bg-gray-200 text-sm transition-colors"
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+          <DateRangePicker from={range.from} to={range.to} onChange={range.onChange} />
         </div>
       </div>
 
@@ -168,7 +113,7 @@ export function AdminOverview() {
           {/* Chart */}
           <div className="border-2 border-gray-800 bg-white mb-8">
             <div className="border-b-2 border-gray-800 bg-gray-100 p-4 font-bold text-gray-900">
-              Revenue vs Payouts ({from} → {to})
+              Revenue vs Payouts ({range.from} → {range.to})
             </div>
             <div className="p-4 h-72">
               <ResponsiveContainer width="100%" height="100%">

@@ -1,8 +1,7 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
-import { useDebounce } from '../../../lib/useDebounce'
+import { useMemo } from 'react'
 import {
   CartesianGrid,
   Line,
@@ -13,34 +12,12 @@ import {
   YAxis,
 } from 'recharts'
 import { api } from '../../../lib/api'
-
-function isoDate(d: Date) {
-  return d.toISOString().slice(0, 10)
-}
-function daysAgo(n: number) {
-  const d = new Date()
-  d.setUTCHours(0, 0, 0, 0)
-  d.setUTCDate(d.getUTCDate() - n)
-  return isoDate(d)
-}
-function today() {
-  return isoDate(new Date())
-}
-
-const PRESETS = [
-  { label: 'Last 7 days', from: () => daysAgo(6), to: today },
-  { label: 'Last 30 days', from: () => daysAgo(29), to: today },
-  { label: 'Last 90 days', from: () => daysAgo(89), to: today },
-  { label: 'Last 365 days', from: () => daysAgo(364), to: today },
-]
+import { DateRangePicker, useDateRange } from '../../components/DateRangePicker'
 
 export function CourseAnalytics() {
   const { id } = useParams<{ id: string }>()
   const courseId = Number(id)
-  const [from, setFrom] = useState(daysAgo(29))
-  const [to, setTo] = useState(today())
-  const debouncedFrom = useDebounce(from)
-  const debouncedTo = useDebounce(to)
+  const range = useDateRange()
 
   const analytics = useQuery({
     queryKey: ['course-analytics', courseId],
@@ -48,8 +25,8 @@ export function CourseAnalytics() {
     enabled: Number.isFinite(courseId),
   })
   const timeline = useQuery({
-    queryKey: ['enrollments-timeline', courseId, debouncedFrom, debouncedTo],
-    queryFn: () => api.getEnrollmentsTimeline(courseId, debouncedFrom, debouncedTo),
+    queryKey: ['enrollments-timeline', courseId, range.debouncedFrom, range.debouncedTo],
+    queryFn: () => api.getEnrollmentsTimeline(courseId, range.debouncedFrom, range.debouncedTo),
     enabled: Number.isFinite(courseId),
   })
 
@@ -129,34 +106,7 @@ export function CourseAnalytics() {
         <div className="border-b-2 border-gray-800 bg-gray-100 p-4">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="font-bold text-gray-900">Enrollments</span>
-            <input
-              type="date"
-              value={from}
-              min="2010-01-01"
-              max={to}
-              onChange={(e) => { if (e.target.value >= '2010-01-01') setFrom(e.target.value) }}
-              className="px-3 py-1 border-2 border-gray-800 bg-white text-sm"
-            />
-            <span className="text-gray-700">—</span>
-            <input
-              type="date"
-              value={to}
-              min={from}
-              max={today()}
-              onChange={(e) => { if (e.target.value >= '2010-01-01') setTo(e.target.value) }}
-              className="px-3 py-1 border-2 border-gray-800 bg-white text-sm"
-            />
-            <div className="ml-auto flex items-center gap-2">
-              {PRESETS.map((p) => (
-                <button
-                  key={p.label}
-                  onClick={() => { setFrom(p.from()); setTo(p.to()) }}
-                  className="px-3 py-1 border-2 border-gray-400 bg-white text-gray-900 hover:bg-gray-200 text-xs transition-colors"
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
+            <DateRangePicker from={range.from} to={range.to} onChange={range.onChange} />
           </div>
         </div>
         <div className="p-4 h-72">
@@ -199,12 +149,12 @@ export function CourseAnalytics() {
         {a.recentStudents.length === 0 ? (
           <div className="p-4 text-gray-600">No enrollments yet.</div>
         ) : (
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead>
               <tr className="border-b-2 border-gray-400 bg-gray-50">
-                <th className="text-left p-3 font-bold text-gray-900">Student Name</th>
-                <th className="text-left p-3 font-bold text-gray-900">Enrollment Date</th>
-                <th className="text-left p-3 font-bold text-gray-900">Progress</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[40%]">Student Name</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[35%]">Enrollment Date</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[25%]">Progress</th>
               </tr>
             </thead>
             <tbody>

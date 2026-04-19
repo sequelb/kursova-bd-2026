@@ -6,20 +6,21 @@ import { Pagination } from '../../components/Pagination'
 const STATUSES: AdminPayout['status'][] = ['Pending', 'Approved', 'Rejected', 'Paid']
 
 const statusBadge: Record<AdminPayout['status'], string> = {
-  Pending: 'bg-white text-gray-900 border-gray-800',
-  Approved: 'bg-gray-200 text-gray-900 border-gray-800',
-  Paid: 'bg-gray-900 text-white border-gray-800',
-  Rejected: 'bg-red-100 text-red-700 border-red-700',
+  Pending: 'bg-gray-100 text-gray-800',
+  Approved: 'bg-gray-300 text-gray-900',
+  Paid: 'bg-gray-900 text-white',
+  Rejected: 'bg-red-100 text-red-700',
 }
 
 export function TeacherPayouts() {
   const [filter, setFilter] = useState<'all' | AdminPayout['status']>('all')
+  const [q, setQ] = useState('')
   const [page, setPage] = useState(1)
   const qc = useQueryClient()
 
   const payouts = useQuery({
-    queryKey: ['admin-payouts', filter, page],
-    queryFn: () => api.listAdminPayouts(filter === 'all' ? undefined : filter, page),
+    queryKey: ['admin-payouts', filter, q, page],
+    queryFn: () => api.listAdminPayouts(filter === 'all' ? undefined : filter, q || undefined, page),
   })
 
   function invalidateAll() {
@@ -46,7 +47,7 @@ export function TeacherPayouts() {
     <div className="p-8">
       <h1 className="mb-6 text-2xl font-bold text-gray-900">Teacher Payout Requests</h1>
 
-      <div className="border-2 border-gray-800 bg-white p-4 mb-6 flex items-center gap-3">
+      <div className="border-2 border-gray-800 bg-white p-4 mb-6 flex items-center gap-3 flex-wrap">
         <span className="text-sm font-bold text-gray-900">Status:</span>
         <select
           value={filter}
@@ -60,6 +61,12 @@ export function TeacherPayouts() {
             </option>
           ))}
         </select>
+        <input
+          value={q}
+          onChange={(e) => { setQ(e.target.value); setPage(1) }}
+          placeholder="Search by teacher name or email…"
+          className="flex-1 min-w-[200px] px-3 py-2 border-2 border-gray-800 bg-white"
+        />
       </div>
 
       {payouts.isPending && <p className="text-gray-600">Loading…</p>}
@@ -74,14 +81,14 @@ export function TeacherPayouts() {
 
       {payouts.data && payouts.data.items.length > 0 && (
         <div className="border-2 border-gray-800 bg-white">
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead>
               <tr className="border-b-2 border-gray-400 bg-gray-50">
-                <th className="text-left p-3 font-bold text-gray-900">Request Date</th>
-                <th className="text-left p-3 font-bold text-gray-900">Teacher</th>
-                <th className="text-left p-3 font-bold text-gray-900">Amount</th>
-                <th className="text-left p-3 font-bold text-gray-900">Status</th>
-                <th className="text-left p-3 font-bold text-gray-900">Action</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[15%]">Request Date</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[30%]">Teacher</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[12%]">Amount</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[13%]">Status</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[30%]">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -97,7 +104,7 @@ export function TeacherPayouts() {
                   <td className="p-3 text-gray-900 font-bold">${p.amount.toFixed(2)}</td>
                   <td className="p-3">
                     <span
-                      className={`inline-block px-3 py-1 border-2 text-sm font-bold ${statusBadge[p.status]}`}
+                      className={`inline-block px-3 py-1 text-xs font-bold ${statusBadge[p.status]}`}
                     >
                       {p.status}
                     </span>
