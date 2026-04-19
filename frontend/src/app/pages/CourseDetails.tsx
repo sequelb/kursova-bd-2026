@@ -1,4 +1,4 @@
-import { Award, CheckCircle, BarChart, BookOpen, FileText, Pencil, Star, Trash2 } from 'lucide-react'
+import { CheckCircle, BarChart, BookOpen, FileText, Pencil, Star, Trash2 } from 'lucide-react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -362,15 +362,15 @@ export function CourseDetails() {
             )}
 
             <div className="border-t-2 border-gray-400 pt-6">
-              <h3 className="font-bold text-gray-900 mb-4">This course includes:</h3>
+              <h3 className="font-bold text-gray-900 mb-4">Course info</h3>
               <ul className="space-y-3">
                 <li className="flex items-center gap-3">
-                  <Award className="w-5 h-5 text-gray-700" />
-                  <span className="text-gray-700">Certificate of completion</span>
+                  <BookOpen className="w-5 h-5 text-gray-700" />
+                  <span className="text-gray-700">{c.enrollmentCount} students enrolled</span>
                 </li>
                 <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-gray-700" />
-                  <span className="text-gray-700">Lifetime access</span>
+                  <Star className="w-5 h-5 text-gray-700" />
+                  <span className="text-gray-700">{c.averageRating.toFixed(1)} avg rating ({c.reviews.length} reviews)</span>
                 </li>
               </ul>
             </div>

@@ -81,8 +81,8 @@ export function Layout() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showUserMenu])
 
-  // Only show search bar on pages where it makes sense (Catalog, course browsing)
-  const showSearch = user.role !== 'Admin' && location.pathname !== '/my-learning'
+  // Only show search bar for students on browsing pages (catalog, course details, author)
+  const showSearch = user.role === 'Student' && location.pathname !== '/my-learning'
 
   async function handleLogout() {
     await logout()
@@ -158,9 +158,9 @@ export function Layout() {
               </button>
 
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-64 border-2 border-gray-800 bg-white shadow-lg z-50">
-                  <div className="p-3 border-b-2 border-gray-400 bg-gray-100 overflow-hidden">
-                    <div className="text-sm font-bold text-gray-900 truncate">{user.email}</div>
+                <div className="absolute right-0 mt-2 min-w-64 border-2 border-gray-800 bg-white shadow-lg z-50">
+                  <div className="p-3 border-b-2 border-gray-400 bg-gray-100">
+                    <div className="text-sm font-bold text-gray-900 break-all">{user.email}</div>
                     <div className="text-xs text-gray-600">{user.role}</div>
                   </div>
                   <button

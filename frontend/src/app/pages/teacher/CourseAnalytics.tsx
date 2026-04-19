@@ -132,6 +132,7 @@ export function CourseAnalytics() {
             <input
               type="date"
               value={from}
+              min="2010-01-01"
               max={to}
               onChange={(e) => setFrom(e.target.value)}
               className="px-3 py-1 border-2 border-gray-800 bg-white text-sm"
@@ -188,7 +189,7 @@ export function CourseAnalytics() {
       {/* Recent students */}
       <div className="border-2 border-gray-800 bg-white">
         <div className="border-b-2 border-gray-800 bg-gray-100 p-4 font-bold text-gray-900">
-          Recent Students
+          Recent Students (last 10)
         </div>
         {a.recentStudents.length === 0 ? (
           <div className="p-4 text-gray-600">No enrollments yet.</div>

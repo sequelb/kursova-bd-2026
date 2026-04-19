@@ -95,6 +95,7 @@ export function AdminOverview() {
           <input
             type="date"
             value={from}
+            min="2010-01-01"
             max={to}
             onChange={(e) => setFrom(e.target.value)}
             className="px-3 py-2 border-2 border-gray-800 bg-white"
@@ -127,7 +128,9 @@ export function AdminOverview() {
 
       {dashboard.isPending && <p className="text-gray-600">Loading…</p>}
       {dashboard.error && (
-        <p className="text-red-700">Failed: {(dashboard.error as Error).message}</p>
+        <div className="border-2 border-red-700 bg-red-50 p-4 mb-6 text-sm text-red-700">
+          {(dashboard.error as Error).message}
+        </div>
       )}
 
       {dashboard.data && (

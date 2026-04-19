@@ -103,18 +103,6 @@ export function Catalog() {
             <ChevronDown className="w-4 h-4" />
           </button>
 
-          {q && (
-            <div className="px-3 py-2 border-2 border-gray-400 bg-white text-sm">
-              Search: <span className="font-bold">"{q}"</span>{' '}
-              <button
-                onClick={() => patchParams({ q: null })}
-                className="ml-2 text-gray-600 hover:text-gray-900"
-              >
-                ×
-              </button>
-            </div>
-          )}
-
           <div className="ml-auto flex items-center gap-2">
             <span className="text-gray-700">Sort by:</span>
             <select
