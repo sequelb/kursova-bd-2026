@@ -22,11 +22,11 @@ import { TeacherPayouts } from './pages/admin/TeacherPayouts'
 import { UserManagement } from './pages/admin/UserManagement'
 
 const studentOnly = (el: React.ReactElement) =>
-  createElement(RequireAuth, { roles: ['Student'] }, el)
+  createElement(RequireAuth, { roles: ['Student'], children: el })
 const teacherOnly = (el: React.ReactElement) =>
-  createElement(RequireAuth, { roles: ['Teacher'] }, el)
+  createElement(RequireAuth, { roles: ['Teacher'], children: el })
 const adminOnly = (el: React.ReactElement) =>
-  createElement(RequireAuth, { roles: ['Admin'] }, el)
+  createElement(RequireAuth, { roles: ['Admin'], children: el })
 
 export const router = createBrowserRouter([
   { path: '/login', Component: Login },

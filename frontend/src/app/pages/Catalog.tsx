@@ -22,11 +22,10 @@ function renderStars(rating: number) {
     stars.push(
       <Star
         key={i}
-        className={`w-4 h-4 ${
-          i <= Math.round(rating)
-            ? 'fill-gray-900 text-gray-900'
-            : 'fill-gray-400 text-gray-400'
-        }`}
+        className={`w-4 h-4 ${i <= Math.round(rating)
+          ? 'fill-gray-900 text-gray-900'
+          : 'fill-gray-400 text-gray-400'
+          }`}
       />,
     )
   }
