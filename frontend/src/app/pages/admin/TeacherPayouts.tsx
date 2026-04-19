@@ -84,7 +84,7 @@ export function TeacherPayouts() {
           <table className="w-full table-fixed">
             <thead>
               <tr className="border-b-2 border-gray-400 bg-gray-50">
-                <th className="text-left p-3 font-bold text-gray-900 w-[15%]">Request Date</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[12%]">Date</th>
                 <th className="text-left p-3 font-bold text-gray-900 w-[30%]">Teacher</th>
                 <th className="text-left p-3 font-bold text-gray-900 w-[12%]">Amount</th>
                 <th className="text-left p-3 font-bold text-gray-900 w-[13%]">Status</th>

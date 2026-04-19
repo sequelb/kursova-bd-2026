@@ -71,19 +71,17 @@ export function FinancialControls() {
           <table className="w-full table-fixed">
             <thead>
               <tr className="border-b-2 border-gray-400 bg-gray-50">
-                <th className="text-left p-3 font-bold text-gray-900 w-[10%]">ID</th>
-                <th className="text-left p-3 font-bold text-gray-900 w-[10%]">Date</th>
-                <th className="text-left p-3 font-bold text-gray-900 w-[18%]">Student</th>
-                <th className="text-left p-3 font-bold text-gray-900 w-[27%]">Course</th>
-                <th className="text-left p-3 font-bold text-gray-900 w-[9%]">Amount</th>
-                <th className="text-left p-3 font-bold text-gray-900 w-[11%]">Status</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[12%]">Date</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[20%]">Student</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[30%]">Course</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[10%]">Amount</th>
+                <th className="text-left p-3 font-bold text-gray-900 w-[13%]">Status</th>
                 <th className="text-left p-3 font-bold text-gray-900 w-[15%]">Action</th>
               </tr>
             </thead>
             <tbody>
               {payments.data.items.map((p) => (
                 <tr key={p.id} className="border-b border-gray-300 last:border-b-0">
-                  <td className="p-3 text-gray-700">TXN-{String(p.id).padStart(5, '0')}</td>
                   <td className="p-3 text-gray-700">
                     {new Date(p.createdAt).toISOString().slice(0, 10)}
                   </td>
