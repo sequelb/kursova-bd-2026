@@ -14,11 +14,19 @@ public class AdminPayoutsController(AppDbContext db) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<PagedResult<AdminPayoutDto>>> List(
-        [FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        [FromQuery] string? status, [FromQuery] string? q,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         var query = db.Payouts.AsQueryable();
         if (!string.IsNullOrWhiteSpace(status))
             query = query.Where(p => p.Status == status);
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var term = $"%{q.Trim()}%";
+            query = query.Where(p =>
+                EF.Functions.ILike(p.Teacher!.User!.FirstName + " " + p.Teacher.User.LastName, term) ||
+                EF.Functions.ILike(p.Teacher!.User!.Email, term));
+        }
 
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
