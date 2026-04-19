@@ -56,7 +56,8 @@ export function Catalog() {
       page,
       pageSize: 12,
     }),
-    [q, sort, minPrice, maxPrice, minRating, categoryIds.join(','), page],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- searchParams.toString() captures all params as one stable string
+    [searchParams.toString()],
   )
 
   const courses = useQuery({
