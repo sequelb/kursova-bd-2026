@@ -138,8 +138,14 @@ export function Dashboard() {
                   {showReasons && (
                     <div className="relative group flex-shrink-0">
                       <Info className="w-4 h-4 text-gray-500 cursor-help mt-1" />
-                      <div className="absolute right-0 top-6 z-50 hidden group-hover:block w-64 p-3 border-2 border-gray-800 bg-white shadow-lg text-sm text-gray-700">
-                        {course.reason}
+                      <div className="absolute right-0 top-6 z-50 hidden group-hover:block w-72 p-3 border-2 border-gray-800 bg-white shadow-lg text-sm text-gray-700 space-y-1">
+                        <div>{course.reason}</div>
+                        <div className="border-t border-gray-300 pt-1 mt-1 text-xs text-gray-500 space-y-0.5">
+                          <div>Confidence: {course.confidence.toFixed(1)}%</div>
+                          <div>Lift: {course.lift.toFixed(2)}×</div>
+                          <div>Rating: {course.averageRating.toFixed(1)}★</div>
+                          <div>Score: {course.score.toFixed(2)}</div>
+                        </div>
                       </div>
                     </div>
                   )}

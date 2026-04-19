@@ -99,6 +99,8 @@ export type RecommendedCourse = {
   reviewCount: number
   enrollmentCount: number
   score: number
+  confidence: number
+  lift: number
   reason: string
 }
 

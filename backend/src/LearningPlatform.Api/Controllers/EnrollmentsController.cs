@@ -54,7 +54,7 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
                 new AuthorDto(c.Author!.UserId, c.Author.User!.FirstName, c.Author.User.LastName),
                 c.Categories.Select(cat => new CategoryDto(cat.Id, cat.Name)).ToList(),
                 avgRating, reviewCount, enrollmentCount,
-                (double)rec.score, rec.reason));
+                (double)rec.score, (double)rec.confidence, (double)rec.lift, rec.reason));
         }
 
         return result;
@@ -65,6 +65,8 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
     {
         public int course_id { get; set; }
         public decimal score { get; set; }
+        public decimal confidence { get; set; }
+        public decimal lift { get; set; }
         public string reason { get; set; } = "";
     }
 

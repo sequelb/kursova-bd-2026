@@ -53,6 +53,8 @@ public record RecommendedCourseDto(
     int ReviewCount,
     int EnrollmentCount,
     double Score,
+    double Confidence,
+    double Lift,
     string Reason);
 
 public record CourseQuery(
