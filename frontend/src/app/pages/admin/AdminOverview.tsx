@@ -97,7 +97,7 @@ export function AdminOverview() {
             value={from}
             min="2010-01-01"
             max={to}
-            onChange={(e) => setFrom(e.target.value)}
+            onChange={(e) => { if (e.target.value >= '2010-01-01') setFrom(e.target.value) }}
             className="px-3 py-2 border-2 border-gray-800 bg-white"
           />
           <span className="text-gray-700">—</span>
@@ -106,7 +106,7 @@ export function AdminOverview() {
             value={to}
             min={from}
             max={today()}
-            onChange={(e) => setTo(e.target.value)}
+            onChange={(e) => { if (e.target.value >= '2010-01-01') setTo(e.target.value) }}
             className="px-3 py-2 border-2 border-gray-800 bg-white"
           />
           <div className="ml-auto flex items-center gap-2">

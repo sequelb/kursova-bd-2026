@@ -134,7 +134,7 @@ export function CourseAnalytics() {
               value={from}
               min="2010-01-01"
               max={to}
-              onChange={(e) => setFrom(e.target.value)}
+              onChange={(e) => { if (e.target.value >= '2010-01-01') setFrom(e.target.value) }}
               className="px-3 py-1 border-2 border-gray-800 bg-white text-sm"
             />
             <span className="text-gray-700">—</span>
@@ -143,7 +143,7 @@ export function CourseAnalytics() {
               value={to}
               min={from}
               max={today()}
-              onChange={(e) => setTo(e.target.value)}
+              onChange={(e) => { if (e.target.value >= '2010-01-01') setTo(e.target.value) }}
               className="px-3 py-1 border-2 border-gray-800 bg-white text-sm"
             />
             <div className="ml-auto flex items-center gap-2">
@@ -161,6 +161,11 @@ export function CourseAnalytics() {
         </div>
         <div className="p-4 h-72">
           {timeline.isPending && <p className="text-gray-600">Loading chart…</p>}
+          {timeline.error && (
+            <div className="border-2 border-red-700 bg-red-50 p-3 text-sm text-red-700">
+              {(timeline.error as Error).message}
+            </div>
+          )}
           {timeline.data && (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
