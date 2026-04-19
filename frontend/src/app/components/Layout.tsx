@@ -132,15 +132,23 @@ export function Layout() {
         <header className="border-b-2 border-gray-800 bg-gray-100 p-4">
           <div className="flex items-center gap-4">
             {showSearch ? (
-              <form onSubmit={handleSearchSubmit} className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                <input
-                  type="text"
-                  value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
-                  placeholder="Search courses..."
-                  className="w-full pl-10 pr-4 py-2 border-2 border-gray-800 bg-white"
-                />
+              <form onSubmit={handleSearchSubmit} className="flex-1 flex gap-2">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                  <input
+                    type="text"
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
+                    placeholder="Search courses..."
+                    className="w-full pl-10 pr-4 py-2 border-2 border-gray-800 bg-white"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="px-4 py-2 border-2 border-gray-800 bg-gray-900 text-white hover:bg-gray-700 transition-colors"
+                >
+                  Search
+                </button>
               </form>
             ) : (
               <div className="flex-1" />
