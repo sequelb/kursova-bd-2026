@@ -11,7 +11,7 @@ import {
   LogOut,
   IdCard,
 } from 'lucide-react'
-import { Link, useLocation, Outlet, useNavigate } from 'react-router'
+import { Link, useLocation, Outlet, useNavigate, useSearchParams } from 'react-router'
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../lib/auth'
 import type { Role } from '../../lib/api'
@@ -67,7 +67,9 @@ export function Layout() {
 
   const navItems = navItemsForRole(user.role)
   const portalTitle = portalTitleForRole(user.role)
-  const [searchValue, setSearchValue] = useState('')
+  const [searchParams] = useSearchParams()
+  const isOnCatalog = location.pathname === '/catalog'
+  const [searchValue, setSearchValue] = useState(isOnCatalog ? searchParams.get('q') ?? '' : '')
 
   // Close user menu when clicking outside
   const userMenuRef = useRef<HTMLDivElement>(null)
@@ -81,8 +83,15 @@ export function Layout() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showUserMenu])
 
-  // Only show search bar for students on browsing pages (catalog, course details, author)
-  const showSearch = user.role === 'Student' && location.pathname !== '/my-learning'
+  const showSearch = user.role === 'Student' && !location.pathname.startsWith('/my-learning') && !location.pathname.startsWith('/learn/')
+
+  useEffect(() => {
+    if (isOnCatalog) {
+      setSearchValue(searchParams.get('q') ?? '')
+    } else {
+      setSearchValue('')
+    }
+  }, [isOnCatalog, searchParams])
 
   async function handleLogout() {
     await logout()
@@ -92,7 +101,15 @@ export function Layout() {
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = searchValue.trim()
-    navigate(trimmed ? `/catalog?q=${encodeURIComponent(trimmed)}` : '/catalog')
+    if (isOnCatalog) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('q')
+      next.delete('page')
+      if (trimmed) next.set('q', trimmed)
+      navigate(`/catalog?${next.toString()}`, { replace: true })
+    } else {
+      navigate(trimmed ? `/catalog?q=${encodeURIComponent(trimmed)}` : '/catalog')
+    }
   }
 
   return (
