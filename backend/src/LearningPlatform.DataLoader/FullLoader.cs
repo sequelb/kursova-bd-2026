@@ -27,10 +27,10 @@ namespace LearningPlatform.DataLoader;
 /// </summary>
 internal static partial class FullLoader
 {
-    private const int TeacherCount = 300;
-    private const int StudentCount = 500;
+    private const int CoursesPerTeacher = 6;   // target avg; actual varies ±2
+    private const int StudentsPerCourse = 5;    // target avg enrollments/course
     private const int MaxLessonsPerCourse = 8;
-    private const int TargetEnrollmentCount = 20000;
+    private const double ReviewProbability = 0.8; // 80% of enrollments get a review
 
     private static readonly string CsvPath = Path.Combine(
         AppContext.BaseDirectory, "data", "courses.csv");
@@ -87,36 +87,53 @@ internal static partial class FullLoader
         var categoryByName = categories.ToDictionary(c => c.Name, c => c);
         Console.WriteLine($"  ✓ {categories.Count} categories");
 
-        // ---------- 2. teachers (generated) ----------
-        Console.WriteLine("Generating teachers...");
+        // ---------- 2. teachers (generated, each specializes in 1 category) ----------
+        // Teacher count is derived from course count so each teacher has ~CoursesPerTeacher courses.
+        var teacherCount = Math.Max(50, rows.Count / CoursesPerTeacher);
+        Console.WriteLine($"Generating {teacherCount} teachers...");
         var teachers = new List<User>();
-        var teacherProfiles = new List<TeacherProfile>();
+        var teacherCategories = new List<int>(); // parallel: each teacher's primary category id
         var usedEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        for (var i = 0; i < TeacherCount; i++)
+        for (var i = 0; i < teacherCount; i++)
         {
             var (first, last) = NamePool.Random(rng);
             string email;
             var seq = 0;
             do { email = NamePool.EmailFor(first, last, seq++); } while (!usedEmails.Add(email));
-            var u = new User
+            teachers.Add(new User
             {
                 FirstName = first,
                 LastName = last,
                 Email = email,
                 Role = Roles.Teacher,
                 PasswordHash = hasher.HashPassword(null!, "password123"),
-            };
-            teachers.Add(u);
+            });
+            // Each teacher specializes in one category
+            teacherCategories.Add(categories[i % categories.Count].Id);
         }
         db.Users.AddRange(teachers);
         await db.SaveChangesAsync();
+        var teacherProfiles = new List<TeacherProfile>();
         foreach (var t in teachers)
             teacherProfiles.Add(new TeacherProfile { UserId = t.Id, Bio = "" });
         db.TeacherProfiles.AddRange(teacherProfiles);
         await db.SaveChangesAsync();
-        Console.WriteLine($"  ✓ {teachers.Count} teachers");
+        Console.WriteLine($"  ✓ {teachers.Count} teachers (~{rows.Count / teacherCount} courses each)");
 
-        // ---------- 3. courses (real) ----------
+        // Build a category → teachers index for course assignment
+        var teachersByCategory = new Dictionary<int, List<int>>(); // categoryId → list of teacher indexes
+        for (var i = 0; i < teachers.Count; i++)
+        {
+            var catId = teacherCategories[i];
+            if (!teachersByCategory.TryGetValue(catId, out var list))
+            {
+                list = new List<int>();
+                teachersByCategory[catId] = list;
+            }
+            list.Add(i);
+        }
+
+        // ---------- 3. courses (real, assigned to category-matching teachers) ----------
         Console.WriteLine("Inserting courses...");
         var courses = new List<Course>();
         var courseSubscribers = new List<int>();
@@ -124,12 +141,24 @@ internal static partial class FullLoader
         {
             var r = rows[i];
 
-            var teacher = teachers[i % teachers.Count];
             var category = categoryByName.TryGetValue(r.Subject?.Trim() ?? "", out var c) ? c : null;
+
+            // Assign to a teacher who specializes in this category.
+            // ~10% of courses go to a random teacher (some teachers branch out).
+            int teacherIdx;
+            if (category is not null && rng.NextDouble() > 0.1
+                && teachersByCategory.TryGetValue(category.Id, out var catTeachers) && catTeachers.Count > 0)
+            {
+                teacherIdx = catTeachers[rng.Next(catTeachers.Count)];
+            }
+            else
+            {
+                teacherIdx = rng.Next(teachers.Count);
+            }
 
             var course = new Course
             {
-                AuthorId = teacher.Id,
+                AuthorId = teachers[teacherIdx].Id,
                 Title = Truncate(r.CourseTitle!.Trim(), 200),
                 Description = $"{r.CourseTitle.Trim()}.\n\nLorem ipsum dolor sit amet, " +
                               "consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut " +
@@ -188,13 +217,15 @@ internal static partial class FullLoader
         Console.WriteLine($"  ✓ {totalLessons} lessons");
 
         // ---------- 5. students (generated, each with 1-2 preferred categories) ----------
-        Console.WriteLine("Generating students...");
+        // Student count derived from course count so avg enrollments/course ≈ StudentsPerCourse
+        var studentCount = Math.Max(100, rows.Count / 2);
+        Console.WriteLine($"Generating {studentCount} students...");
         var students = new List<User>();
         // Each student gets 1-2 preferred categories. 70% of their enrollments will
         // be biased toward courses in those categories, 30% random. This makes the
         // recommendation algorithm produce meaningful results.
         var studentPreferences = new List<HashSet<int>>(); // categoryId sets, parallel with students
-        for (var i = 0; i < StudentCount; i++)
+        for (var i = 0; i < studentCount; i++)
         {
             var (first, last) = NamePool.Random(rng);
             string email;
@@ -218,6 +249,9 @@ internal static partial class FullLoader
         db.Users.AddRange(students);
         await db.SaveChangesAsync();
         Console.WriteLine($"  ✓ {students.Count} students (each with 1-2 preferred categories)");
+
+        // Enrollment target: ~StudentsPerCourse enrollments per course on average
+        var targetEnrollments = Math.Min(courses.Count * StudentsPerCourse, students.Count * 30);
 
         // Build a category → course index for biased enrollment
         var coursesByCategory = new Dictionary<int, List<int>>(); // categoryId → list of course indexes
@@ -245,7 +279,7 @@ internal static partial class FullLoader
             cum[i] = running;
         }
 
-        var targetEnrollments = Math.Min(TargetEnrollmentCount, courses.Count * 10);
+        // targetEnrollments already computed above from proportions
         var taken = new HashSet<(int sid, int cid)>();
         var enrollmentList = new List<(Enrollment e, Payment p)>();
         var attempts = 0;
@@ -367,7 +401,7 @@ internal static partial class FullLoader
         // Note: trigger trg_lesson_progress_recompute fires per row and updates
         // enrollments.progress automatically.
 
-        // ---------- 8. reviews (random reviews from students who finished a course) ----------
+        // ---------- 8. reviews (~80% of ALL enrollments, not just completed) ----------
         Console.WriteLine("Generating reviews...");
         var reviewComments = new[]
         {
@@ -385,16 +419,11 @@ internal static partial class FullLoader
             "A bit too theoretical for my taste, but still useful.",
         };
 
-        // Only students with progress=100 can leave a review (matches our schema: review FK → enrollment).
-        // ~40% of completed enrollments leave a review.
-        var completedEnrollments = await db.Enrollments
-            .Where(e => e.Progress >= 100)
-            .ToListAsync();
-
+        // Any enrolled student can leave a review (the app allows it). ~80% do.
         var reviewBatch = new List<Review>();
-        foreach (var enrollment in completedEnrollments)
+        foreach (var enrollment in allEnrollments)
         {
-            if (rng.NextDouble() > 0.4) continue; // 40% chance to review
+            if (rng.NextDouble() > ReviewProbability) continue;
 
             // Bias grades: most reviews are 3-5, few are 1-2
             var grade = rng.NextDouble() switch
@@ -414,10 +443,23 @@ internal static partial class FullLoader
                 Comment = reviewComments[rng.Next(reviewComments.Length)],
                 CreatedAt = reviewedAt,
             });
+
+            if (reviewBatch.Count >= chunkSize)
+            {
+                db.Reviews.AddRange(reviewBatch);
+                await db.SaveChangesAsync();
+                Console.Write($"\r  inserting reviews... {reviewBatch.Count} so far");
+                reviewBatch.Clear();
+            }
         }
-        db.Reviews.AddRange(reviewBatch);
-        await db.SaveChangesAsync();
-        Console.WriteLine($"  ✓ {reviewBatch.Count} reviews (from {completedEnrollments.Count} completed enrollments)");
+        if (reviewBatch.Count > 0)
+        {
+            db.Reviews.AddRange(reviewBatch);
+            await db.SaveChangesAsync();
+        }
+        var totalReviews = await db.Reviews.CountAsync();
+        Console.WriteLine();
+        Console.WriteLine($"  ✓ {totalReviews} reviews (~{(int)(ReviewProbability * 100)}% of {allEnrollments.Count} enrollments)");
 
         // ---------- 9. teacher payouts (some random payout requests) ----------
         Console.WriteLine("Generating teacher payouts...");
@@ -449,7 +491,7 @@ internal static partial class FullLoader
         Console.WriteLine();
         Console.WriteLine("Done.");
         Console.WriteLine($"  Total records inserted (approx): " +
-                          $"{categories.Count + teachers.Count + students.Count + courses.Count + totalLessons + taken.Count + totalProgress + reviewBatch.Count + payoutBatch.Count}");
+                          $"{categories.Count + teachers.Count + students.Count + courses.Count + totalLessons + taken.Count + totalProgress + totalReviews + payoutBatch.Count}");
     }
 
     // ---- helpers ----
