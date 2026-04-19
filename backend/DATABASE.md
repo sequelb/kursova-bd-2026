@@ -29,11 +29,11 @@ PostgreSQL database for the online learning platform. This document covers the c
 - **Total tables:** 11 (within the 8–12 rubric requirement)
 - **Max columns per table:** 8 (within the ≤10 rubric requirement)
 - **Total triggers:** 3
-- **Total stored procedures/functions:** 4 (1 helper + 2 trigger functions + 1 recommendation function)
+- **Total stored procedures/functions:** 5 (1 progress trigger function + 1 balance helper procedure + 2 balance trigger functions + 1 recommendation function)
 - **Total explicit indexes:** 5 (plus 5 implicit from UNIQUE constraints)
-- **Total check constraints:** 12
-- **Foreign keys:** 14
-- **Default values:** 8 columns with defaults
+- **Total check constraints:** 11
+- **Foreign keys:** 13
+- **Default values:** 9 columns with defaults
 
 ---
 
