@@ -84,7 +84,7 @@ public class CoursesController(AppDbContext db) : ControllerBase
             .Include(c => c.Author!).ThenInclude(a => a.User)
             .Include(c => c.Categories)
             .Include(c => c.Lessons.OrderBy(l => l.OrderNumber))
-            .SingleOrDefaultAsync(c => c.Id == id);
+            .SingleOrDefaultAsync(c => c.Id == id && c.Status == CourseStatus.Published);
 
         if (course is null) return NotFound();
 
