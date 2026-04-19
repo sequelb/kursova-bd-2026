@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace LearningPlatform.Api.Dtos;
 
 // ---- finance dashboard ----
@@ -47,4 +49,4 @@ public record AdminUserDto(
     string Role,
     string Status);
 
-public record UpdateUserStatusRequest(string Status);
+public record UpdateUserStatusRequest([Required] string Status);

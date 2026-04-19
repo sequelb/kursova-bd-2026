@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace LearningPlatform.Api.Dtos;
 
 // ---- courses ----
@@ -27,22 +29,26 @@ public record TeacherCourseDetailDto(
     List<LessonEditDto> Lessons);
 
 public record CreateCourseRequest(
-    string Title,
-    string Description,
-    decimal Price,
-    string Level,
+    [Required, MinLength(1), MaxLength(200)] string Title,
+    [Required, MinLength(1), MaxLength(4000)] string Description,
+    [Range(0, 9999)] decimal Price,
+    [Required] string Level,
     int[] CategoryIds);
 
 public record UpdateCourseRequest(
-    string Title,
-    string Description,
-    decimal Price,
-    string Level,
+    [Required, MinLength(1), MaxLength(200)] string Title,
+    [Required, MinLength(1), MaxLength(4000)] string Description,
+    [Range(0, 9999)] decimal Price,
+    [Required] string Level,
     int[] CategoryIds);
 
-public record CreateLessonRequest(string Title, string Content);
-public record UpdateLessonRequest(string Title, string Content);
-public record ReorderLessonsRequest(int[] LessonIds);
+public record CreateLessonRequest(
+    [Required, MinLength(1), MaxLength(200)] string Title,
+    [Required, MinLength(1), MaxLength(50000)] string Content);
+public record UpdateLessonRequest(
+    [Required, MinLength(1), MaxLength(200)] string Title,
+    [Required, MinLength(1), MaxLength(50000)] string Content);
+public record ReorderLessonsRequest([Required] int[] LessonIds);
 
 // ---- analytics ----
 
@@ -77,9 +83,9 @@ public record PayoutHistoryItemDto(int Id, decimal Amount, string Status, DateTi
 
 public record EarningsDto(decimal Balance, List<PayoutHistoryItemDto> History);
 
-public record CreatePayoutRequest(decimal Amount);
+public record CreatePayoutRequest([Range(0.01, 999999)] decimal Amount);
 
 // ---- teacher profile (own) ----
 
 public record MyTeacherProfileDto(string Bio, decimal Balance);
-public record UpdateMyTeacherProfileRequest(string Bio);
+public record UpdateMyTeacherProfileRequest([MaxLength(2000)] string Bio);

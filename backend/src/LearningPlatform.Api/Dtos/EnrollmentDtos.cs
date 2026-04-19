@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace LearningPlatform.Api.Dtos;
 
 public record EnrollmentListItemDto(
@@ -26,4 +28,4 @@ public record EnrollmentDetailDto(
 
 public record EnrollResultDto(int EnrollmentId, int? FirstLessonId);
 
-public record CreateReviewRequest(int Grade, string Comment);
+public record CreateReviewRequest([Range(1, 5)] int Grade, [MaxLength(2000)] string Comment);
