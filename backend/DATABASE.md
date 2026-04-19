@@ -473,20 +473,39 @@ All tables with composite keys satisfy 2NF:
 - `lesson_progress(enrollment_id, lesson_id)` — `completed_at` depends on the full composite key (when THIS student completed THIS lesson in THIS enrollment), not on either key alone
 - `course_categories(courses_id, categories_id)` — no non-key attributes, so 2NF is trivially satisfied
 
-### Third Normal Form (3NF) — with one justified exception
+### Third Normal Form (3NF) — with two justified exceptions
 
 All tables satisfy 3NF except:
 
-**Exception: `enrollments.progress`**
+**Exception 1: `enrollments.progress`**
 
-`progress` is functionally dependent on `(enrollment_id)` via a calculation over `lesson_progress` and `lessons`. It's a derived/computed value that could be calculated on the fly instead of stored.
+`progress` is functionally dependent on `(enrollment_id)` via a calculation over `lesson_progress` and `lessons`:
+```
+progress = COUNT(lesson_progress for this enrollment) × 100 / COUNT(lessons for this course)
+```
 
-**Justification for the violation:**
-1. The "My Learning" page (student dashboard) displays progress for every enrolled course. Computing it live would require a JOIN + GROUP BY + COUNT for every enrollment on every page load.
-2. The trigger `trg_lesson_progress_recompute` keeps it automatically in sync — the denormalization cost (data redundancy) is mitigated by the trigger guarantee.
-3. The CHECK constraint `progress BETWEEN 0 AND 100` adds a safety net even if the trigger has a bug.
+It's a derived value that could be computed on the fly.
 
-This is a textbook example of **controlled denormalization for performance**, documented and defended.
+**Justification:**
+1. The "My Learning" page displays progress for every enrolled course. Computing it live would require a JOIN + GROUP BY + COUNT for every enrollment on every page load.
+2. Trigger `trg_lesson_progress_recompute` keeps it automatically in sync — the denormalization cost (data redundancy) is mitigated by the trigger guarantee.
+3. The CHECK constraint `progress BETWEEN 0 AND 100` adds a safety net.
+
+**Exception 2: `teacher_profiles.balance`**
+
+`balance` is functionally dependent on `(user_id)` via a calculation over `payments` and `payouts`:
+```
+balance = SUM(completed payments for this teacher's courses) − SUM(non-rejected payouts by this teacher)
+```
+
+It's also a derived value that could be computed on the fly.
+
+**Justification:**
+1. The teacher's balance is displayed on every teacher page (sidebar, earnings, profile). Computing it live would require joining `payments → courses` (to find the teacher's courses) and `payouts` — two aggregate subqueries on every page load.
+2. Triggers `trg_payments_balance` and `trg_payouts_balance` keep it automatically in sync using the `recompute_teacher_balance()` helper procedure, which performs a full recompute from scratch.
+3. The application never writes to `balance` directly — only the triggers do. This eliminates the risk of app code and stored value getting out of sync.
+
+Both exceptions follow the same pattern: **controlled denormalization backed by triggers**. The derived field is stored for read performance, and triggers guarantee consistency. This is a standard database design technique for frequently-read, infrequently-written computed values.
 
 ---
 
