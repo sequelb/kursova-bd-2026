@@ -27,6 +27,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(setUser)
       .catch(() => setUser(null))
       .finally(() => setLoading(false))
+
+    const interval = setInterval(() => {
+      api.me().then(setUser).catch(() => setUser(null))
+    }, 60_000)
+    return () => clearInterval(interval)
   }, [])
 
   // Re-fetch /api/me whenever any API call gets 401/403. This catches the
