@@ -44,10 +44,10 @@ This is the mental model: **your component is a pure function from state to UI**
 
 ```tsx
 // Parent passes data down via props:
-<CourseCard title="React Basics" price={49.99} />
+<CourseCard id={1} title="React Basics" price={49.99} averageRating={4.5} reviewCount={12} createdAt="2026-01-01" />
 
 // Child receives them:
-function CourseCard({ title, price }: { title: string; price: number }) {
+function CourseCard({ id, title, price, ... }: CourseCardProps) {
   return <div>{title} — ${price}</div>
 }
 ```
@@ -142,6 +142,8 @@ frontend/src/
     │   ├── Layout.tsx         ← sidebar + header (shared chrome)
     │   ├── RequireAuth.tsx    ← gate: redirect if not logged in
     │   ├── HomeRedirect.tsx   ← redirect / based on role
+    │   ├── CourseCard.tsx      ← shared course card (Catalog, Dashboard, Author)
+    │   ├── QueryError.tsx     ← error display (404 → NotFound page, else banner)
     │   ├── Pagination.tsx     ← reusable page navigation
     │   ├── DateRangePicker.tsx← reusable date range inputs
     │   └── CategoryMultiSelect.tsx ← searchable category dropdown
@@ -152,6 +154,7 @@ frontend/src/
         ├── CourseDetails.tsx   ← student course detail
         ├── LessonPlayer.tsx   ← student lesson viewer
         ├── Author.tsx         ← public author profile
+        ├── NotFound.tsx       ← generic 404 page (also catch-all route)
         ├── teacher/           ← 6 teacher pages
         └── admin/             ← 4 admin pages
 ```
@@ -372,7 +375,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!res.ok) {
     // Extract error message from the JSON body
     // Dispatch auth event on 401/403 (for cross-tab recovery)
-    throw new Error(message)
+    throw new ApiError(message, res.status)  // ApiError extends Error with a status property
   }
   return res.json()
 }
@@ -476,7 +479,7 @@ createBrowserRouter([
       { path: 'courses/:id', ... },              // student only
       { path: 'teacher/courses', ... },          // teacher only
       { path: 'admin/overview', ... },           // admin only
-      // ...
+      { path: '*', Component: NotFound },        // catch-all 404
     ],
   },
 ])
@@ -614,6 +617,8 @@ const save = useMutation({
 {save.isSuccess && !dirty && <span>✓ Saved</span>}
 ```
 
+**Frontend form validation:** Inputs use native HTML validation attributes — `required`, `maxLength`, `minLength` — on forms throughout the app (Register, CourseEditor, LessonForm, TeacherProfile, CourseDetails review). For example, the course title input has `maxLength={200}` and `required`, the description has `maxLength={2000}`, and the lesson form's Save button is `disabled` when title or content is empty. This gives instant browser-level feedback without custom validation code.
+
 The flow:
 1. Page loads → `useQuery` fetches course data
 2. `useEffect` pre-fills the form with the fetched data
@@ -683,6 +688,37 @@ Reading left to right:
 ---
 
 ## Part 11: The Reusable Components
+
+### CourseCard
+
+Used on: Catalog, Dashboard (recommendations), Author page. Extracted to eliminate duplicate card markup across three pages.
+
+```tsx
+<CourseCard
+  id={course.id}
+  title={course.title}
+  price={course.price}
+  averageRating={course.averageRating}
+  reviewCount={course.reviewCount}
+  createdAt={course.createdAt}
+  author={course.author}          // optional — shown when available
+  overlay={<Badge>Enrolled</Badge>}  // optional — slot for enrollment badges etc.
+  titleExtra={<Info />}           // optional — slot for recommendation (i) icon
+  buttonLabel="View Course"       // optional — custom button text
+/>
+```
+
+Includes the `renderStars` helper internally. Props: `id`, `title`, `price`, `averageRating`, `reviewCount`, `createdAt`, plus optional `author`, `overlay`, `titleExtra`, `buttonLabel`.
+
+### QueryError
+
+Used on: CourseDetails, LessonPlayer, Author, CourseEditor, CourseAnalytics. Replaces ad-hoc error banners.
+
+```tsx
+<QueryError error={query.error} />
+```
+
+If the error is an `ApiError` with status 404, it renders the `NotFound` page. Otherwise it renders a standard red error banner with the error message.
 
 ### Pagination
 

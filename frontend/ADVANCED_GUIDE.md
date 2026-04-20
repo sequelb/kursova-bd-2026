@@ -495,27 +495,20 @@ useEffect(() => {
 
 ## 4. Advanced Patterns in Our Codebase
 
-### The "smart banner" pattern (LessonPlayer → CourseDetails)
+### The completion banner (LessonPlayer → CourseDetails)
 
-When a student finishes all lessons, a banner appears linking to the course page with `?review=open`. The course page reads this param and auto-opens the review form:
+When a student finishes all lessons, a banner appears linking to the course page:
 
 ```tsx
-// LessonPlayer: the banner link
-<Link to={`/courses/${courseId}?review=open`}>Leave a review →</Link>
-
-// CourseDetails: read the param and auto-open
-const [searchParams] = useSearchParams()
-useEffect(() => {
-  if (searchParams.get('review') === 'open' && enrollmentDetail.data) {
-    setShowReviewForm(true)
-    setTimeout(() => {
-      document.getElementById('review-section')?.scrollIntoView({ behavior: 'smooth' })
-    }, 50)
-  }
-}, [searchParams.get('review'), enrollmentDetail.data?.id])
+// LessonPlayer: always links to the course page (no review-state logic)
+{allDone && (
+  <Link to={`/courses/${courseId}`}>
+    Course finished! Head to the course page to view details or leave a review.
+  </Link>
+)}
 ```
 
-The `setTimeout` with 50ms delay is because the form needs one render cycle to appear in the DOM before we can scroll to it.
+The banner intentionally doesn't try to detect whether the student has already left a review — that state could be stale in the cache. The CourseDetails page handles the review section correctly regardless.
 
 ### The debounce pattern (date range inputs)
 
@@ -731,11 +724,11 @@ We use `replace` for:
 if (!res.ok) {
   // Try to parse error body: { error: "message" } or { errors: ["msg1", "msg2"] }
   // Fall back to "HTTP 401" if no body
-  throw new Error(message)
+  throw new ApiError(message, res.status)
 }
 ```
 
-Every failed request becomes a thrown Error with a human-readable message extracted from the backend's JSON response.
+Every failed request becomes a thrown `ApiError` (extends `Error` with a `status` property) with a human-readable message extracted from the backend's JSON response. The `status` field lets components distinguish between error types — for example, `QueryError` checks for status 404 to show a friendly "Not Found" page instead of a red error banner.
 
 ### Level 2: TanStack Query
 

@@ -264,6 +264,10 @@ If the user opens a second tab and logs in as a different user, the cookie is re
 
 When `api.ts` gets a 401/403, it dispatches a custom DOM event. This effect listens for it and re-fetches `/api/me`, which updates the user state and triggers a re-render across the app.
 
+### Suspended user detection
+
+`AuthProvider` also polls `GET /api/me` every 60 seconds via `setInterval`. If an admin suspends the user's account, the next poll returns a 401, which sets `user` to `null` and triggers a redirect to the login page. The user gets kicked within a minute of being suspended.
+
 ### RequireAuth component
 
 ```tsx
@@ -374,7 +378,7 @@ Every API call goes through this function. It:
 1. Prepends the base URL (`http://localhost:5000`)
 2. Sets `credentials: 'include'` — tells the browser to send the `lp.auth` cookie
 3. Sets `Content-Type: application/json` — tells the server the body is JSON
-4. On error, extracts the error message from the JSON response body
+4. On error, extracts the error message from the JSON response body and throws an `ApiError` (extends `Error` with a `status` property)
 5. On 401/403, dispatches the `AUTH_INVALIDATED_EVENT` for cross-tab recovery
 
 ### The api object
@@ -577,6 +581,33 @@ Our app uses a consistent visual language:
 
 ## 10. Reusable Components We Built
 
+### CourseCard
+
+```tsx
+<CourseCard
+  id={course.id}
+  title={course.title}
+  price={course.price}
+  averageRating={course.averageRating}
+  reviewCount={course.reviewCount}
+  createdAt={course.createdAt}
+  author={course.author}       // optional
+  overlay={<Badge />}          // optional overlay slot
+  titleExtra={<InfoIcon />}    // optional slot next to title
+  buttonLabel="View Course"    // optional custom button text
+/>
+```
+
+Shared course card component extracted to `src/app/components/CourseCard.tsx`. Used by Catalog, Dashboard (recommendations), and Author pages — replacing duplicate card markup in all three. Includes the `renderStars` helper internally.
+
+### QueryError
+
+```tsx
+<QueryError error={query.error} />
+```
+
+Checks if the error is an `ApiError` with status 404 and renders the `NotFound` page. Otherwise shows a standard red error banner. Used by CourseDetails, LessonPlayer, Author, CourseEditor, and CourseAnalytics.
+
 ### Pagination
 
 ```tsx
@@ -665,7 +696,7 @@ This makes the app bookmarkable and shareable — copy the URL, paste it, see th
 
 **TeacherDashboard** (`/teacher/courses`) — grid of own courses with status badges, rating, enrollment count. "Create New Course" navigates to the editor.
 
-**CourseEditor** (`/teacher/courses/new` and `/teacher/courses/:id/edit`) — course details form + lesson manager (add/edit/delete/reorder with up-down arrows). Publish/Unpublish buttons. Delete course at the bottom.
+**CourseEditor** (`/teacher/courses/new` and `/teacher/courses/:id/edit`) — course details form + lesson manager (add/edit/delete/reorder with up-down arrows). Publish button (unpublish removed). Delete course at the bottom. Inputs have `maxLength`/`required` validation (title, description, price).
 
 **CourseAnalytics** (`/teacher/courses/:id/analytics`) — KPI cards + enrollment timeline chart with date range picker.
 

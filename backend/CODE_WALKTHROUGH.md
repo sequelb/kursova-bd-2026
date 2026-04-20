@@ -267,7 +267,7 @@ var course = await db.Courses
 if (course is null) return NotFound(new { error = "Course not found." });
 ```
 
-**Line 152:** The `Status == Published` check is in the WHERE clause. If a teacher unpublishes a course while a student is looking at it, the enrollment will fail with "Course not found" — not a crash.
+**Line 152:** The `Status == Published` check is in the WHERE clause. If a course is still in Draft, the enrollment will fail with "Course not found" — not a crash.
 
 ```csharp
 if (await db.Enrollments.AnyAsync(e => e.StudentId == studentId && e.CourseId == courseId))

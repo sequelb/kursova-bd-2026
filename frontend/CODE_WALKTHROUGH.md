@@ -47,7 +47,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       (body as { error?: string } | null)?.error ??
       (body as { errors?: string[] } | null)?.errors?.join(', ') ??
       `HTTP ${res.status}`
-    throw new Error(message)
+    throw new ApiError(message, res.status)  // ApiError extends Error with a status property
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>

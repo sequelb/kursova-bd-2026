@@ -34,6 +34,8 @@ A `record` is like a class but designed for data. The compiler auto-generates:
 
 We use records for all **DTOs** (Data Transfer Objects) — the shapes we send to/from the frontend. They're immutable and serialize to JSON automatically.
 
+**Request DTOs** (the ones sent FROM the frontend) carry **validation attributes** — `[Required]`, `[MinLength]`, `[MaxLength]`, `[Range]`, `[EmailAddress]`, etc. Because every controller is decorated with `[ApiController]`, ASP.NET validates these automatically before the controller method runs. If validation fails, the framework returns a 400 response with field-level error messages — no manual checking needed in the controller.
+
 ### Primary Constructors
 
 ```csharp
@@ -282,7 +284,7 @@ b.Entity<User>(e =>
 });
 ```
 
-We use the **Fluent API** (method chaining) instead of data annotations (`[Required]`, `[MaxLength]`) on the model classes. This keeps the POCO classes clean — they're just plain data holders, and all the database-specific configuration is in one place.
+We use the **Fluent API** (method chaining) for **entity** configuration (the database schema). Data annotations like `[Required]` and `[MaxLength]` are used on **request DTOs** for input validation (see the Records section above), but entity classes stay clean — just plain data holders with all DB-specific configuration in one place.
 
 ### Navigation properties and Include
 
@@ -420,7 +422,7 @@ public class CoursesController(AppDbContext db) : ControllerBase
 }
 ```
 
-- `[ApiController]` enables automatic 400 responses for invalid model state
+- `[ApiController]` enables automatic model validation — if a request DTO has validation attributes (`[Required]`, `[MaxLength]`, `[Range]`, etc.) and the incoming JSON violates them, ASP.NET returns 400 with field-level errors before the controller method even runs
 - `[Route]` sets the URL prefix
 - `[Authorize]` / `[Authorize(Roles = "...")]` controls access
 - Each method is an endpoint, decorated with `[HttpGet]`, `[HttpPost]`, etc.
@@ -485,7 +487,7 @@ return new PagedResult<CourseListItemDto>(rows, totalCount, page, pageSize);
 
 The key insight: EF translates this entire chain into ONE SQL query. The `Select`, `Where`, `OrderBy`, `Skip`, `Take` — all become parts of the same `SELECT ... FROM ... WHERE ... ORDER BY ... LIMIT ... OFFSET ...` statement.
 
-**GET /api/courses/{id}** — loads a single course with all its relations (`Include` for author, categories, lessons) plus runs separate queries for reviews and enrollment count.
+**GET /api/courses/{id}** — loads a single **published** course with all its relations (`Include` for author, categories, lessons) plus runs separate queries for reviews and enrollment count. The query includes `c.Status == CourseStatus.Published`, so unpublished courses return 404 to students.
 
 ### EnrollmentsController — student enrollment + progress + reviews + recommendations
 
