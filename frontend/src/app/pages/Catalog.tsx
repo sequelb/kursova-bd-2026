@@ -188,7 +188,7 @@ export function Catalog() {
                   buttonLabel={enrollment ? 'Continue' : 'Details'}
                   overlay={
                     enrollment ? (
-                      <div className="absolute top-2 right-2 px-2 py-1 border-2 border-gray-800 bg-gray-900 text-white text-xs font-bold">
+                      <div className="absolute -top-4  right-2 px-2 py-1 border-2 border-gray-800 bg-gray-900 text-white text-xs font-bold">
                         Enrolled · {enrollment.progress}%
                       </div>
                     ) : undefined

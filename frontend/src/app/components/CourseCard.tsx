@@ -46,9 +46,9 @@ export function CourseCard({
   return (
     <div className="relative border-2 border-gray-800 bg-white p-4 flex flex-col">
       {overlay}
-      <div className="w-full h-40 border-2 border-gray-400 bg-gray-200 flex items-center justify-center mb-4">
+      { /*<div className="w-full h-40 border-2 border-gray-400 bg-gray-200 flex items-center justify-center mb-4">
         <span className="text-gray-500 text-sm">[Image Placeholder]</span>
-      </div>
+      </div>*/ }
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
         {titleExtra}

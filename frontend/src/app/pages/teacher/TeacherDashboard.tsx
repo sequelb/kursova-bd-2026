@@ -34,21 +34,22 @@ export function TeacherDashboard() {
       {courses.data && courses.data.length > 0 && (
         <div className="grid grid-cols-4 gap-6">
           {courses.data.map((course) => (
-            <div key={course.id} className="border-2 border-gray-800 bg-white">
-              <div className="w-full h-40 border-b-2 border-gray-800 bg-gray-200 flex items-center justify-center relative">
-                <span className="text-gray-500 text-sm">[Course Image]</span>
-                <div
-                  className={`absolute top-2 right-2 px-2 py-1 border-2 border-gray-800 text-xs font-bold ${
-                    course.status === 'Published'
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-white text-gray-900'
-                  }`}
-                >
-                  {course.status}
-                </div>
+            <div key={course.id} className="relative border-2 border-gray-800 bg-white flex flex-col">
+            {/* relative */}
+              <div
+                className={`absolute -top-4 right-2 px-2 py-1 border-2 border-gray-800 text-xs font-bold ${
+                  course.status === 'Published'
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-white text-gray-900'
+                }`}
+              >
+                {course.status}
               </div>
+              {/* <div className="w-full h-40 border-b-2 border-gray-800 bg-gray-200 flex items-center justify-center">
+                <span className="text-gray-500 text-sm">[Course Image]</span>
+              </div> */}
 
-              <div className="p-4">
+              <div className="p-4 flex flex-col flex-1">
                 <h3 className="font-bold text-gray-900 mb-3">{course.title}</h3>
 
                 <div className="space-y-2 mb-4 text-sm">
@@ -79,7 +80,7 @@ export function TeacherDashboard() {
                   <div className="text-gray-700">${course.price.toFixed(2)}</div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 mt-auto">
                   <Link
                     to={`/teacher/courses/${course.id}/analytics`}
                     className="block w-full py-2 text-center border-2 border-gray-800 bg-gray-900 text-white hover:bg-gray-700 transition-colors"
