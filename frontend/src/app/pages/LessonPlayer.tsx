@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, CheckCircle, Circle, Star, FileText } from '
 import { Link, useNavigate, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
+import { QueryError } from '../components/QueryError'
 
 export function LessonPlayer() {
   const { enrollmentId: enrollmentIdStr, lessonId: lessonIdStr } = useParams<{
@@ -45,11 +46,7 @@ export function LessonPlayer() {
     return <div className="p-8 text-gray-600">Loading…</div>
   }
   if (enrollment.error || lesson.error) {
-    return (
-      <div className="p-8 text-red-700">
-        Failed to load: {((enrollment.error ?? lesson.error) as Error).message}
-      </div>
-    )
+    return <QueryError error={(enrollment.error ?? lesson.error) as Error} />
   }
   if (!enrollment.data || !lesson.data) return null
 

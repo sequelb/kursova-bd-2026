@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
+import { QueryError } from '../components/QueryError'
 
 export function CourseDetails() {
   const { id } = useParams<{ id: string }>()
@@ -97,9 +98,7 @@ export function CourseDetails() {
   if (course.isPending || enrollments.isPending) {
     return <div className="p-8 text-gray-600">Loading…</div>
   }
-  if (course.error) {
-    return <div className="p-8 text-red-700">Failed: {(course.error as Error).message}</div>
-  }
+  if (course.error) return <QueryError error={course.error as Error} />
   if (!course.data) return null
 
   const c = course.data

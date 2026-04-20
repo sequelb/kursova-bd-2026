@@ -12,6 +12,7 @@ import {
   Upload,
 } from 'lucide-react'
 import { api, type CreateCourseRequest, type LessonEdit } from '../../../lib/api'
+import { QueryError } from '../../components/QueryError'
 import { CategoryMultiSelect } from '../../components/CategoryMultiSelect'
 
 const LEVELS = ['Beginner', 'Intermediate', 'Advanced']
@@ -102,9 +103,7 @@ export function CourseEditor() {
   }
 
   if (!isNew && course.isPending) return <div className="p-8 text-gray-600">Loading…</div>
-  if (!isNew && course.error) {
-    return <div className="p-8 text-red-700">Failed: {(course.error as Error).message}</div>
-  }
+  if (!isNew && course.error) return <QueryError error={course.error as Error} />
 
   return (
     <div className="p-8 max-w-5xl">

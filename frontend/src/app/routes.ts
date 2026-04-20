@@ -20,6 +20,7 @@ import { AdminOverview } from './pages/admin/AdminOverview'
 import { FinancialControls } from './pages/admin/FinancialControls'
 import { TeacherPayouts } from './pages/admin/TeacherPayouts'
 import { UserManagement } from './pages/admin/UserManagement'
+import { NotFound } from './pages/NotFound'
 
 const studentOnly = (el: React.ReactElement) =>
   createElement(RequireAuth, { roles: ['Student'], children: el })
@@ -64,6 +65,9 @@ export const router = createBrowserRouter([
       { path: 'admin/payments', element: adminOnly(createElement(FinancialControls)) },
       { path: 'admin/payouts', element: adminOnly(createElement(TeacherPayouts)) },
       { path: 'admin/users', element: adminOnly(createElement(UserManagement)) },
+
+      // Catch-all inside authenticated layout
+      { path: '*', Component: NotFound },
     ],
   },
 ])

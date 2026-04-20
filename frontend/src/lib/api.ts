@@ -155,6 +155,12 @@ function buildCourseQuery(q: CourseQuery): string {
  */
 export const AUTH_INVALIDATED_EVENT = 'lp:auth-invalidated'
 
+export class ApiError extends Error {
+  constructor(message: string, public status: number) {
+    super(message)
+  }
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(BASE + path, {
     credentials: 'include',
@@ -176,7 +182,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       (body as { error?: string; errors?: string[] } | null)?.error ??
       (body as { errors?: string[] } | null)?.errors?.join(', ') ??
       `HTTP ${res.status}`
-    throw new Error(message)
+    throw new ApiError(message, res.status)
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>

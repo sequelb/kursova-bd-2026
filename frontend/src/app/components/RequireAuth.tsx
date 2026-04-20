@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { useAuth } from '../../lib/auth'
 import type { Role } from '../../lib/api'
+import { NotFound } from '../pages/NotFound'
 
 type Props = {
   children: ReactNode
@@ -28,11 +29,7 @@ export function RequireAuth({ children, roles }: Props) {
   }
 
   if (roles && !roles.includes(user.role)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-700">
-        You don’t have access to this page.
-      </div>
-    )
+    return <NotFound />
   }
 
   return <>{children}</>

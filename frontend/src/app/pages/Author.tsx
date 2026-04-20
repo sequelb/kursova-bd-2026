@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { User as UserIcon } from 'lucide-react'
 import { api } from '../../lib/api'
 import { CourseCard } from '../components/CourseCard'
+import { QueryError } from '../components/QueryError'
 
 export function Author() {
   const { id } = useParams<{ id: string }>()
@@ -15,9 +16,7 @@ export function Author() {
   })
 
   if (author.isPending) return <div className="p-8 text-gray-600">Loading…</div>
-  if (author.error) {
-    return <div className="p-8 text-red-700">Failed: {(author.error as Error).message}</div>
-  }
+  if (author.error) return <QueryError error={author.error as Error} />
   if (!author.data) return null
 
   const a = author.data

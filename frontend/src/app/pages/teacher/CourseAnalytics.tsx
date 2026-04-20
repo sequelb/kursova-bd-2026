@@ -12,6 +12,7 @@ import {
   YAxis,
 } from 'recharts'
 import { api } from '../../../lib/api'
+import { QueryError } from '../../components/QueryError'
 import { DateRangePicker, useDateRange } from '../../components/DateRangePicker'
 
 export function CourseAnalytics() {
@@ -55,9 +56,7 @@ export function CourseAnalytics() {
   }, [timeline.data])
 
   if (analytics.isPending) return <div className="p-8 text-gray-600">Loading…</div>
-  if (analytics.error) {
-    return <div className="p-8 text-red-700">Failed: {(analytics.error as Error).message}</div>
-  }
+  if (analytics.error) return <QueryError error={analytics.error as Error} />
   if (!analytics.data) return null
 
   const a = analytics.data
