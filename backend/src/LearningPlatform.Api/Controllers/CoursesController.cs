@@ -92,7 +92,6 @@ public class CoursesController(AppDbContext db) : ControllerBase
             .Where(r => r.Enrollment!.CourseId == id)
             .OrderByDescending(r => r.CreatedAt)
             .Select(r => new ReviewDto(
-                r.Id,
                 r.Grade,
                 r.Comment,
                 r.CreatedAt,

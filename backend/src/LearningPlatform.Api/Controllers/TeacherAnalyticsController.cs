@@ -104,7 +104,6 @@ public class TeacherAnalyticsController(AppDbContext db) : ControllerBase
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(r => new TeacherReviewDto(
-                r.Id,
                 r.Enrollment!.CourseId,
                 r.Enrollment.Course!.Title,
                 r.Enrollment.Student!.FirstName,

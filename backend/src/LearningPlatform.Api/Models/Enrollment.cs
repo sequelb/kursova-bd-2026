@@ -26,7 +26,6 @@ public class LessonProgress
 
 public class Review
 {
-    public int Id { get; set; }
     public int EnrollmentId { get; set; }
     public int Grade { get; set; }
     public string Comment { get; set; } = string.Empty;

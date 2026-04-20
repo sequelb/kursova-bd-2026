@@ -113,7 +113,7 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
 
         var myReview = await db.Reviews
             .Where(r => r.EnrollmentId == id)
-            .Select(r => new MyReviewDto(r.Id, r.Grade, r.Comment, r.CreatedAt))
+            .Select(r => new MyReviewDto(r.Grade, r.Comment, r.CreatedAt))
             .SingleOrDefaultAsync();
 
         return new EnrollmentDetailDto(
@@ -242,7 +242,7 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
         review.Comment = req.Comment ?? string.Empty;
         await db.SaveChangesAsync();
 
-        return new ReviewDto(review.Id, review.Grade, review.Comment, review.CreatedAt,
+        return new ReviewDto(review.Grade, review.Comment, review.CreatedAt,
             enrollment.Student!.FirstName, enrollment.Student.LastName);
     }
 
@@ -286,7 +286,7 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
         db.Reviews.Add(review);
         await db.SaveChangesAsync();
 
-        return new ReviewDto(review.Id, review.Grade, review.Comment, review.CreatedAt,
+        return new ReviewDto(review.Grade, review.Comment, review.CreatedAt,
             enrollment.Student!.FirstName, enrollment.Student.LastName);
     }
 }

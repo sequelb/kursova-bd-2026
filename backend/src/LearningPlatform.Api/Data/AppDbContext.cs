@@ -117,13 +117,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         b.Entity<Review>(e =>
         {
+            e.HasKey(r => r.EnrollmentId);
             e.Property(r => r.Comment).HasMaxLength(2000);
             e.Property(r => r.CreatedAt).HasDefaultValueSql("now()");
             e.HasOne(r => r.Enrollment)
                 .WithOne(en => en.Review)
                 .HasForeignKey<Review>(r => r.EnrollmentId)
                 .OnDelete(DeleteBehavior.Cascade);
-            e.HasIndex(r => r.EnrollmentId).IsUnique();
             e.ToTable(t => t.HasCheckConstraint("ck_reviews_grade", "grade BETWEEN 1 AND 5"));
         });
 

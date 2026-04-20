@@ -29,7 +29,6 @@ export type CourseListItem = {
 export type LessonSummary = { id: number; orderNumber: number; title: string }
 
 export type Review = {
-  id: number
   grade: number
   comment: string
   createdAt: string
@@ -63,7 +62,6 @@ export type EnrollmentListItem = {
 }
 
 export type MyReview = {
-  id: number
   grade: number
   comment: string
   createdAt: string
@@ -467,7 +465,6 @@ export type CourseAnalytics = {
 export type TimelinePoint = { date: string; count: number }
 
 export type TeacherReview = {
-  id: number
   courseId: number
   courseTitle: string
   studentFirstName: string

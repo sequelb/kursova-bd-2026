@@ -53,7 +53,7 @@ export function CourseDetails() {
       setReviewGrade(myReview.grade)
       setReviewComment(myReview.comment)
     }
-  }, [myReview?.id])
+  }, [myReview?.createdAt])
 
   // Smart-banner: ?review=open auto-opens the form and scrolls to it.
   useEffect(() => {
@@ -286,8 +286,8 @@ export function CourseDetails() {
               </div>
             ) : (
               <div className="space-y-4">
-                {c.reviews.map((r) => (
-                  <div key={r.id} className="border-2 border-gray-400 bg-white p-6">
+                {c.reviews.map((r, i) => (
+                  <div key={i} className="border-2 border-gray-400 bg-white p-6">
                     <div className="mb-2">
                       <span className="font-bold text-gray-900">
                         {r.studentFirstName} {r.studentLastName}

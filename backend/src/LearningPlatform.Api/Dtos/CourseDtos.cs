@@ -19,7 +19,6 @@ public record CourseListItemDto(
 public record LessonSummaryDto(int Id, int OrderNumber, string Title);
 
 public record ReviewDto(
-    int Id,
     int Grade,
     string Comment,
     DateTime CreatedAt,

@@ -53,7 +53,7 @@ export function StudentReviews() {
 
       <div className="space-y-4">
         {reviews.data?.items.map((r) => (
-          <div key={r.id} className="border-2 border-gray-800 bg-white p-6">
+          <div key={`${r.courseId}-${r.createdAt}`} className="border-2 border-gray-800 bg-white p-6">
             <div className="flex items-start justify-between mb-2">
               <div>
                 <div className="font-bold text-gray-900">

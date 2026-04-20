@@ -68,7 +68,6 @@ public record TimelinePointDto(DateTime Date, int Count);
 // ---- reviews ----
 
 public record TeacherReviewDto(
-    int Id,
     int CourseId,
     string CourseTitle,
     string StudentFirstName,

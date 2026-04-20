@@ -14,7 +14,7 @@ public record LessonProgressDto(int LessonId, bool Completed);
 
 public record LessonContentDto(int Id, int OrderNumber, string Title, string Content);
 
-public record MyReviewDto(int Id, int Grade, string Comment, DateTime CreatedAt);
+public record MyReviewDto(int Grade, string Comment, DateTime CreatedAt);
 
 public record EnrollmentDetailDto(
     int Id,
