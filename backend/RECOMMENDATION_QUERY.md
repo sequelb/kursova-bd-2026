@@ -20,6 +20,7 @@ AS $$ ...
 - `max_results` — how many courses to return (default 6, shown in a 3-column grid on the dashboard)
 
 **Returns** a table of recommended courses, each with:
+
 | Column | Type | What it is |
 |--------|------|------------|
 | `course_id` | INT | The recommended course's primary key |
@@ -447,3 +448,72 @@ Student's enrollments
                   Dashboard cards
                   with (i) tooltip
 ```
+
+why do we SUM? what does it sum across?                                                                                               
+                                                                                                                                        
+● The SUM aggregates across all rules for the same recommended course.                                                                  
+                                                                                                                                        
+  A recommended course can appear via multiple shared courses. Say you took courses A, B, and C. Course X might be recommended through: 
+  - Rule "A → X" (confidence 40%, lift 2.0, 15 weighted peers)
+  - Rule "B → X" (confidence 25%, lift 1.5, 8 weighted peers)                                                                           
+  - Rule "C → X" (confidence 10%, lift 0.8, 3 weighted peers)
+                                                                                                                                        
+  The GROUP BY rm.rec_course_id collapses these 3 rows into one. The SUM adds up their contributions:                                   
+                                                                                                                                        
+  SUM = (0.40 * 2.0 * 15) + (0.25 * 1.5 * 8) + (0.10 * 0.8 * 3)                                                                         
+      = 12.0 + 3.0 + 0.24                                                                                                               
+      = 15.24                                                                                                                           
+                                                                                                                                        
+  Then that sum gets multiplied by the rating and category bonuses (which are per-course, not per-rule — so they're outside the SUM).   
+   
+  Why sum instead of taking the best rule? A course recommended via 3 independent paths is a stronger recommendation than one           
+  recommended via only 1, even if that one path has higher confidence. The sum rewards courses with multiple supporting patterns.
+                                                                                                                                        
+❯ didn't we do DISTINCT ON in the previous table ? i don't understand                                                                   
+                                                                      
+● Good question. The DISTINCT ON in best_rule picks one best rule per recommended course — but that's only used for the reason text (to 
+  show the user the single strongest explanation).                                                                                    
+                                                                                                                                        
+  rule_metrics still has ALL rules. The scored CTE joins back to rule_metrics (not best_rule) for the scoring:                          
+                                                                                                                                        
+  rule_metrics:  has ALL rules (A→X, B→X, C→X)     ← SUM happens here                                                                   
+  best_rule:     has ONE rule per course (A→X only)  ← used only for the reason text                                                    
+                                                                                                                                        
+  So in scored:                                                                                                                         
+  - FROM rule_metrics rm — all rules, multiple rows per recommended course                                                              
+  - JOIN best_rule br — brings in the best rule's metadata (for the reason text later)                                                  
+  - GROUP BY rm.rec_course_id — collapses all rules into one row, SUMming their scores
+                                                                                                                                        
+  The best_rule columns (br.shared_course_id, br.rule_confidence, br.rule_lift) are the same value for every row in the group (since    
+  there's only one best rule per course), so they're safe in the GROUP BY.                                                              
+                                                                                                                                        
+  In short: score uses all rules (sum), but the explanation shows only the best one.      
+
+
+
+
+
+
+
+==
+
+
+
+ no, i mean if we use just the best rule as the reason it is a bit of a lie isn't it ?                                                 
+                                                                                        
+● You're right — the score is a sum of all rules, but the reason only explains one of them. So the score might be 15.24 but the reason  
+  says "40% of students who took A also took this" which only accounts for 12.0 of that.
+                                                                                                                                        
+  But it's not really a lie — it's a simplification. The alternative would be something like:                                           
+                                                                                                                                        
+  ▎ "Recommended because of 3 patterns: 40% from course A (2.0× lift), 25% from course B (1.5× lift), 10% from course C (0.8× lift)"    
+                                                            
+  That's more honest but much harder to read. The single best rule gives the user the main reason — and it is genuinely the strongest   
+  signal. The score being higher than that one rule would suggest just means there's additional supporting evidence, which makes the
+  recommendation stronger, not weaker.                                                                                                  
+                                                            
+  Think of it like a movie recommendation: "Because you liked Inception" is more useful than "Because you liked Inception (60%), The    
+  Matrix (25%), and Interstellar (15%)". The first one gives you the intuition; the exact breakdown is noise for most users.
+                                                                                                                                        
+  For the defense, if asked, you can explain that the reason shows the strongest association rule while the score aggregates all        
+  contributing rules — that shows you understand the difference.

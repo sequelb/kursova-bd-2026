@@ -103,7 +103,7 @@ static async Task ResetAsync(AppDbContext db)
     await db.Database.ExecuteSqlRawAsync("DELETE FROM categories");
     await db.Database.ExecuteSqlRawAsync("DELETE FROM teacher_profiles");
     await db.Database.ExecuteSqlRawAsync($"DELETE FROM users WHERE role <> '{Roles.Admin}'");
-    Console.WriteLine("  ✓ wiped");
+    Console.WriteLine(" + wiped");
 }
 
 static async Task EnsureAdminAsync(AppDbContext db)
@@ -122,5 +122,5 @@ static async Task EnsureAdminAsync(AppDbContext db)
     admin.PasswordHash = hasher.HashPassword(admin, "admin123");
     db.Users.Add(admin);
     await db.SaveChangesAsync();
-    Console.WriteLine($"  ✓ created admin user ({adminEmail} / admin123)");
+    Console.WriteLine($" + created admin user ({adminEmail} / admin123)");
 }

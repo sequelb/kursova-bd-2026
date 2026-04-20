@@ -128,7 +128,9 @@ export function Dashboard() {
                         <div className="border-t border-gray-300 pt-1 mt-1 text-xs text-gray-500 space-y-0.5">
                           <div>Confidence: {course.confidence.toFixed(1)}%</div>
                           <div>Lift: {course.lift.toFixed(2)}×</div>
+{/*
                           <div>Rating: {course.averageRating.toFixed(1)}★</div>
+*/}
                           <div>Score: {course.score.toFixed(2)}</div>
                         </div>
                       </div>

@@ -1,10 +1,5 @@
 namespace LearningPlatform.DataLoader;
 
-/// <summary>
-/// Random first/last name combinations + email generation. Used to fabricate
-/// believable teacher and student accounts since the Udemy CSV doesn't ship
-/// with real instructor or student names.
-/// </summary>
 internal static class NamePool
 {
     private static readonly string[] FirstNames =
