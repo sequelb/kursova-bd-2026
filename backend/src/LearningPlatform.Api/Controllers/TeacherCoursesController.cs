@@ -224,7 +224,7 @@ public class TeacherCoursesController(AppDbContext db) : ControllerBase
         db.Lessons.Remove(lesson);
         await db.SaveChangesAsync();
 
-        // Compact order numbers: shift everything after the deleted one down by 1.
+        // shift everything after the deleted lesson down by 1.
         var laterLessons = await db.Lessons
             .Where(l => l.CourseId == courseId && l.OrderNumber > deletedOrder)
             .OrderBy(l => l.OrderNumber)
@@ -248,16 +248,15 @@ public class TeacherCoursesController(AppDbContext db) : ControllerBase
         if (req.LessonIds.Length != course.Lessons.Count || req.LessonIds.Any(id => !existingIds.Contains(id)))
             return BadRequest(new { error = "Reorder list must contain exactly the course's lesson ids." });
 
-        // Two-pass to avoid violating the (course_id, order_number) unique constraint mid-update.
         await using var tx = await db.Database.BeginTransactionAsync();
         var lessonsById = course.Lessons.ToDictionary(l => l.Id);
 
-        // Pass 1: bump everything to negative slots
+        // change everything to negative slots
         var temp = -1;
         foreach (var l in course.Lessons) l.OrderNumber = temp--;
         await db.SaveChangesAsync();
 
-        // Pass 2: assign final order
+        //  assign final order
         for (var i = 0; i < req.LessonIds.Length; i++)
             lessonsById[req.LessonIds[i]].OrderNumber = i + 1;
         await db.SaveChangesAsync();

@@ -60,7 +60,7 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
         return result;
     }
 
-    // Raw result shape from the SQL function
+    // raw result structure from the sql function
     private class RawRecommendation
     {
         public int course_id { get; set; }
@@ -196,7 +196,8 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
 
         db.LessonProgress.Remove(row);
         await db.SaveChangesAsync();
-        // The trigger updates enrollments.progress for us.
+        
+        // trigger updates enrollments.progress
         return NoContent();
     }
 
@@ -217,7 +218,8 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
 
         db.LessonProgress.Add(new LessonProgress { EnrollmentId = id, LessonId = lessonId });
         await db.SaveChangesAsync();
-        // The trigger updates enrollments.progress for us.
+        //
+        // trigger updates enrollments.progress
         return NoContent();
     }
 

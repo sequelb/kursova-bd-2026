@@ -38,7 +38,7 @@ public class TeacherAnalyticsController(AppDbContext db) : ControllerBase
 
         var completionRate = enrollments.Count == 0
             ? 0d
-            : (double)enrollments.Count(e => e.Progress >= 100) / enrollments.Count * 100d;
+            : (double)enrollments.Count(e => e.Progress == 100) / enrollments.Count * 100d;
 
         var recent = enrollments
             .OrderByDescending(e => e.EnrolledAt)

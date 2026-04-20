@@ -114,7 +114,7 @@ export function Layout() {
 
   return (
     <div className="h-screen flex bg-white overflow-hidden">
-      {/* Left Sidebar */}
+      {/* sidebar on the left */}
       <aside className="w-64 border-r-2 border-gray-800 bg-gray-100 p-6 overflow-y-auto">
         <div className="mb-8">
           <div className="text-xl font-bold text-gray-900">{portalTitle}</div>
@@ -143,9 +143,8 @@ export function Layout() {
         </nav>
       </aside>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {/* Top Header */}
+        {/* top header */}
         <header className="border-b-2 border-gray-800 bg-gray-100 p-4">
           <div className="flex items-center gap-4">
             {showSearch ? (
@@ -201,7 +200,7 @@ export function Layout() {
           </div>
         </header>
 
-        {/* Page Content */}
+        {/* page content */}
         <main className="flex-1 overflow-auto bg-gray-50">
           <Outlet />
         </main>

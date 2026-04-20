@@ -27,10 +27,11 @@ export function AdminOverview() {
     const rev = dashboard.data.revenueTimeline
     const pay = dashboard.data.payoutsTimeline
     const days = rev.length
-    // Pick a bucket size based on range length so the chart never has too many points.
-    // ≤60 days → daily, ≤365 days → weekly (7), >365 days → monthly (~30).
+    // bucket size based on range length so the chart never has too many points
+    // <=60 days - daily, 365 days - weekly 7; - 365 days - monthly (30)
     const bucketDays = days <= 60 ? 1 : days <= 365 ? 7 : 30
-    // For ranges > 1 year, show YYYY-MM; for shorter ranges, MM-DD is enough.
+    // for ranges > 1 year  yyyy-mm
+    // for ranges < 1 year  MM-DD
     const labelFn = (dateStr: string) =>
       bucketDays >= 30 ? dateStr.slice(0, 7) : dateStr.slice(5, 10)
 
@@ -63,7 +64,7 @@ export function AdminOverview() {
     <div className="p-8">
       <h1 className="mb-6 text-2xl font-bold text-gray-900">Financial Dashboard</h1>
 
-      {/* Date range picker */}
+      {/* date range picker */}
       <div className="border-2 border-gray-800 bg-white p-4 mb-6">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-sm font-bold text-gray-900">Date range:</span>
@@ -80,7 +81,7 @@ export function AdminOverview() {
 
       {dashboard.data && (
         <>
-          {/* KPI cards */}
+          {/* info cards */}
           <div className="grid grid-cols-4 gap-4 mb-8">
             <div className="border-2 border-gray-800 bg-white p-6 text-center">
               <div className="text-3xl font-bold text-gray-900">
@@ -110,7 +111,7 @@ export function AdminOverview() {
             </div>
           </div>
 
-          {/* Chart */}
+          {/* the chart */}
           <div className="border-2 border-gray-800 bg-white mb-8">
             <div className="border-b-2 border-gray-800 bg-gray-100 p-4 font-bold text-gray-900">
               Revenue vs Payouts ({range.from} → {range.to})
