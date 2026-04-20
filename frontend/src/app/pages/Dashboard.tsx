@@ -1,24 +1,9 @@
-import { Info, Star } from 'lucide-react'
+import { Info } from 'lucide-react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api } from '../../lib/api'
-
-function renderStars(rating: number) {
-  const stars = []
-  for (let i = 1; i <= 5; i++) {
-    stars.push(
-      <Star
-        key={i}
-        className={`w-4 h-4 ${i <= Math.round(rating)
-            ? 'fill-gray-900 text-gray-900'
-            : 'fill-gray-400 text-gray-400'
-          }`}
-      />,
-    )
-  }
-  return stars
-}
+import { CourseCard } from '../components/CourseCard'
 
 export function Dashboard() {
   const enrollments = useQuery({
@@ -125,16 +110,17 @@ export function Dashboard() {
         {recommendations.data && recommendations.data.length > 0 && (
           <div className="grid grid-cols-3 gap-6">
             {recommendations.data.map((course) => (
-              <div
+              <CourseCard
                 key={course.id}
-                className="border-2 border-gray-800 bg-white p-4 flex flex-col"
-              >
-                <div className="w-full h-40 border-2 border-gray-400 bg-gray-200 flex items-center justify-center mb-4">
-                  <span className="text-gray-500 text-sm">[Image Placeholder]</span>
-                </div>
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-gray-900 mb-2">{course.title}</h3>
-                  {showReasons && (
+                id={course.id}
+                title={course.title}
+                price={course.price}
+                averageRating={course.averageRating}
+                reviewCount={course.reviewCount}
+                createdAt={course.createdAt}
+                author={course.author}
+                titleExtra={
+                  showReasons ? (
                     <div className="relative group flex-shrink-0">
                       <Info className="w-4 h-4 text-gray-500 cursor-help mt-1" />
                       <div className="absolute right-0 top-6 z-50 hidden group-hover:block w-72 p-3 border-2 border-gray-800 bg-white shadow-lg text-sm text-gray-700 space-y-1">
@@ -147,34 +133,9 @@ export function Dashboard() {
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 mb-2">
-                  {renderStars(course.averageRating)}
-                  <span className="ml-1 text-sm text-gray-600">
-                    ({course.averageRating.toFixed(1)}) · {course.reviewCount}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600 mb-1">
-                  By{' '}
-                  <Link
-                    to={`/authors/${course.author.id}`}
-                    className="text-gray-900 hover:underline"
-                  >
-                    {course.author.firstName} {course.author.lastName}
-                  </Link>
-                </p>
-                <p className="text-sm text-gray-600 mb-2">
-                  Published: {new Date(course.createdAt).toISOString().slice(0, 10)}
-                </p>
-                <p className="font-bold text-gray-900 mb-4">${course.price.toFixed(2)}</p>
-                <Link
-                  to={`/courses/${course.id}`}
-                  className="block w-full mt-auto py-2 text-center border-2 border-gray-800 bg-gray-900 text-white hover:bg-gray-700 transition-colors"
-                >
-                  Details
-                </Link>
-              </div>
+                  ) : undefined
+                }
+              />
             ))}
           </div>
         )}
