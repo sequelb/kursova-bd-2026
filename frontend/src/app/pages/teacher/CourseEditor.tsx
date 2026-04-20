@@ -87,14 +87,6 @@ export function CourseEditor() {
     },
   })
 
-  const unpublish = useMutation({
-    mutationFn: () => api.unpublishCourse(courseId!),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['teacher-courses'] })
-      qc.invalidateQueries({ queryKey: ['teacher-course', courseId] })
-    },
-  })
-
   const deleteCourse = useMutation({
     mutationFn: () => api.deleteCourse(courseId!),
     onSuccess: () => {
@@ -149,19 +141,6 @@ export function CourseEditor() {
                 {publish.isPending ? 'Publishing…' : 'Publish'}
               </button>
             )}
-            {course.data.status === 'Published' && (
-              <button
-                onClick={() => {
-                  if (window.confirm(
-                    'Unpublish this course? It will be hidden from the catalog. Students who are already enrolled will keep access.'
-                  )) unpublish.mutate()
-                }}
-                disabled={unpublish.isPending}
-                className="px-4 py-2 border-2 border-gray-800 bg-white text-gray-900 hover:bg-gray-200 transition-colors disabled:opacity-50"
-              >
-                {unpublish.isPending ? 'Unpublishing…' : 'Unpublish'}
-              </button>
-            )}
           </div>
         )}
       </div>
@@ -169,10 +148,6 @@ export function CourseEditor() {
       {publish.error && (
         <p className="mb-4 text-sm text-red-700">{(publish.error as Error).message}</p>
       )}
-      {unpublish.error && (
-        <p className="mb-4 text-sm text-red-700">{(unpublish.error as Error).message}</p>
-      )}
-
       {/* Course info form */}
       <section className="mb-8 border-2 border-gray-800 bg-white p-6">
         <h2 className="text-lg font-bold text-gray-900 mb-4">Course details</h2>

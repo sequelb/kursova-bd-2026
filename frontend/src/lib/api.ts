@@ -253,8 +253,6 @@ export const api = {
     request<void>(`/api/teacher/courses/${id}`, { method: 'DELETE' }),
   publishCourse: (id: number) =>
     request<void>(`/api/teacher/courses/${id}/publish`, { method: 'POST' }),
-  unpublishCourse: (id: number) =>
-    request<void>(`/api/teacher/courses/${id}/unpublish`, { method: 'POST' }),
 
   // ---- teacher: lessons ----
   addLesson: (courseId: number, body: { title: string; content: string }) =>
