@@ -1,4 +1,4 @@
-import { CheckCircle, BarChart, BookOpen, FileText, Pencil, Star, Trash2 } from 'lucide-react'
+import { CheckCircle, BarChart, BookOpen, FileText, Pencil, Star, Trash2, Calendar } from 'lucide-react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -42,7 +42,7 @@ export function CourseDetails() {
     },
   })
 
-  // ---- review form state ----
+  // review form state 
   const myReview = enrollmentDetail.data?.myReview ?? null
   const [showReviewForm, setShowReviewForm] = useState(false)
   const [reviewGrade, setReviewGrade] = useState(5)
@@ -55,7 +55,7 @@ export function CourseDetails() {
     }
   }, [myReview?.createdAt])
 
-  // Smart-banner: ?review=open auto-opens the form and scrolls to it.
+  // ?review=open auto-opens the form and scrolls to it for reviesw
   useEffect(() => {
     if (searchParams.get('review') === 'open' && enrollmentDetail.data) {
       setShowReviewForm(true)
@@ -116,7 +116,7 @@ export function CourseDetails() {
   return (
     <div className="p-8">
       <div className="flex gap-8">
-        {/* Left Column */}
+        {/* left column */}
         <div className="flex-[7]">
           <h1 className="mb-4 text-3xl font-bold text-gray-900">{c.title}</h1>
 
@@ -132,14 +132,32 @@ export function CourseDetails() {
 
           <div className="flex items-center gap-2 mb-6 flex-wrap">
             <span className="text-sm text-gray-600">Categories:</span>
-            {c.categories.map((cat) => (
+            {
+            // c.categories.map((cat) => (
+            //   <span
+            //     key={cat.id}
+            //     className="px-3 py-1 border-2 border-gray-400 bg-gray-100 text-gray-900 text-sm"
+            //   >
+            //     {cat.name}
+            //   </span>
+            // ))
+            }
+
+            {
+            c.categories.length > 0 ? c.categories.map((cat) => (
               <span
                 key={cat.id}
                 className="px-3 py-1 border-2 border-gray-400 bg-gray-100 text-gray-900 text-sm"
               >
                 {cat.name}
               </span>
-            ))}
+            )) : 
+              <span
+                className="px-3 py-1 border-2 border-gray-200 bg-gray-100 text-gray-700 text-sm"
+              >
+                {'No categories'}
+              </span>
+            }
           </div>
 
           <section className="mb-8">
@@ -168,12 +186,12 @@ export function CourseDetails() {
             </div>
           </section>
 
-          {/* Your review section — only for enrolled students */}
+          {/* review section : only for enrolled students */}
           {existingEnrollment && (
             <section id="review-section" className="mb-8">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Your Review</h2>
 
-              {/* Has a review */}
+              {/* has a review */}
               {myReview && !showReviewForm && (
                 <div className="border-2 border-gray-800 bg-white p-6">
                   <div className="flex items-start justify-between gap-4">
@@ -206,7 +224,7 @@ export function CourseDetails() {
                 </div>
               )}
 
-              {/* No review yet, finished or not — show CTA */}
+              {/* if no review yet — show CTA */}
               {!myReview && !showReviewForm && (
                 <button
                   onClick={() => setShowReviewForm(true)}
@@ -217,7 +235,7 @@ export function CourseDetails() {
                 </button>
               )}
 
-              {/* Form */}
+              {/* form */}
               {showReviewForm && (
                 <div className="border-2 border-gray-800 bg-gray-100 p-6 space-y-3">
                   <div>
@@ -304,7 +322,7 @@ export function CourseDetails() {
           </section>
         </div>
 
-        {/* Right Column */}
+        {/* right column */}
         <div className="flex-[3]">
           <div className="sticky top-8 border-2 border-gray-800 bg-white p-6">
             <div className="text-center mb-6">
@@ -324,6 +342,7 @@ export function CourseDetails() {
                 <FileText className="w-5 h-5 text-gray-700" />
                 <span className="text-gray-700">Format: Text-based</span>
               </div>
+
             </div>
 
             {existingEnrollment ? (

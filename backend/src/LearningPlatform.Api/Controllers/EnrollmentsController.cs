@@ -19,7 +19,7 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
     {
         var studentId = CurrentUserId;
 
-        // Call the SQL function
+        // call the sql function
         var rawResults = await db.Database
             .SqlQuery<RawRecommendation>($"SELECT * FROM get_recommendations({studentId}, 6)")
             .ToListAsync();
@@ -29,7 +29,7 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
         var courseIds = rawResults.Select(r => r.course_id).ToList();
         var reasonMap = rawResults.ToDictionary(r => r.course_id, r => (r.score, r.reason));
 
-        // Hydrate full course details for each recommended course
+        // load all data
         var courses = await db.Courses
             .Where(c => courseIds.Contains(c.Id))
             .Include(c => c.Author!).ThenInclude(a => a.User)
@@ -172,8 +172,7 @@ public class EnrollmentsController(AppDbContext db) : ControllerBase
         };
         db.Enrollments.Add(enrollment);
 
-        // The teacher's balance is recomputed by trigger trg_payments_balance
-        // when the payments row is inserted above.
+        //trigger 
 
         await db.SaveChangesAsync();
         await tx.CommitAsync();

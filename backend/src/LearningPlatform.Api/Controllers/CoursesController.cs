@@ -31,7 +31,7 @@ public class CoursesController(AppDbContext db) : ControllerBase
         if (filters.CreatedAfter is not null) query = query.Where(c => c.CreatedAt >= filters.CreatedAfter);
         if (filters.CreatedBefore is not null) query = query.Where(c => c.CreatedAt <= filters.CreatedBefore);
 
-        // project with rating so we can filter/sort
+        // project with rating so we can filter/sort using rating
         var projected = query.Select(c => new
         {
             Course = c,

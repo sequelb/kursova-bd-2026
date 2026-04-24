@@ -34,8 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval)
   }, [])
 
-  // Re-fetch /api/me whenever any API call gets 401/403. This catches the
-  // "two-tab cookie swap" case where another tab replaced the auth cookie.
+  // re-fetches /api/me whenever an api call returns 401/403
+  // two-tab cookie swap case where another tab replaced the auth cookie.
+  // logs out the user
   useEffect(() => {
     const handler = () => {
       api.me().then(setUser).catch(() => setUser(null))

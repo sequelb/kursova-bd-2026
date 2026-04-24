@@ -57,7 +57,8 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
-    await DbSeeder.SeedAsync(scope.ServiceProvider);
+    // 
+    // await DbSeeder.SeedAsync(scope.ServiceProvider);
 }
 
 app.UseCors();

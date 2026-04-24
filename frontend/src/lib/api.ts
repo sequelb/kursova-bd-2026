@@ -142,15 +142,9 @@ function buildCourseQuery(q: CourseQuery): string {
   return s ? `?${s}` : ''
 }
 
-/**
- * Dispatched whenever an API call returns 401 or 403. The auth provider listens
- * for it and re-fetches `/api/me` so that `RequireAuth` can redirect the user
- * if their session is gone or their role no longer matches the route.
- *
- * This catches the "two-tab cookie swap" case: opening a second tab and logging
- * in as a different user replaces the cookie shared by both tabs, and we want
- * the first tab to notice the next time it tries to do anything.
- */
+//  dispatched whenever an api call returns 401 or 403.
+//  this catches the "two-tab cookie swap" case
+
 export const AUTH_INVALIDATED_EVENT = 'lp:auth-invalidated'
 
 export class ApiError extends Error {
@@ -167,7 +161,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   })
   if (!res.ok) {
     if ((res.status === 401 || res.status === 403) && path !== '/api/me') {
-      // Don't dispatch for /api/me itself — that would cause infinite loops.
+      // dont dispatch for /api/me itself as that would cause infinite loops.
       window.dispatchEvent(new CustomEvent(AUTH_INVALIDATED_EVENT))
     }
     let body: unknown = null
@@ -176,10 +170,13 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     } catch {
       /* ignore */
     }
-    const message =
-      (body as { error?: string; errors?: string[] } | null)?.error ??
-      (body as { errors?: string[] } | null)?.errors?.join(', ') ??
-      `HTTP ${res.status}`
+    const b = body as { error?: string; errors?: Record<string, string[]> | string[] } | null
+    let message = b?.error ?? `HTTP ${res.status}`
+    if (!b?.error && b?.errors) {
+      message = Array.isArray(b.errors)
+        ? b.errors.join(', ')
+        : Object.values(b.errors).flat().join(', ')
+    }
     throw new ApiError(message, res.status)
   }
   if (res.status === 204) return undefined as T
@@ -187,7 +184,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  // ---- auth ----
+  // auth 
   register: (body: {
     email: string
     password: string
@@ -207,79 +204,98 @@ export const api = {
   logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
   me: () => request<User>('/api/me'),
 
-  // ---- recommendations ----
+  // recommendations 
   getRecommendations: () => request<RecommendedCourse[]>('/api/me/recommendations'),
 
-  // ---- catalog ----
+  // catalog 
   listCategories: () => request<Category[]>('/api/categories'),
   listCourses: (q: CourseQuery = {}) =>
     request<PagedResult<CourseListItem>>('/api/courses' + buildCourseQuery(q)),
   getCourse: (id: number) => request<CourseDetail>(`/api/courses/${id}`),
 
-  // ---- student / enrollments ----
+  // student / enrollments 
   listMyEnrollments: () => request<EnrollmentListItem[]>('/api/me/enrollments'),
+
   getEnrollment: (id: number) => request<EnrollmentDetail>(`/api/me/enrollments/${id}`),
+
   getLessonContent: (enrollmentId: number, lessonId: number) =>
     request<LessonContent>(`/api/me/enrollments/${enrollmentId}/lessons/${lessonId}`),
+
   enroll: (courseId: number) =>
     request<EnrollResult>(`/api/courses/${courseId}/enroll`, { method: 'POST' }),
+
   completeLesson: (enrollmentId: number, lessonId: number) =>
     request<void>(`/api/enrollments/${enrollmentId}/lessons/${lessonId}/complete`, { method: 'POST' }),
+
   uncompleteLesson: (enrollmentId: number, lessonId: number) =>
     request<void>(`/api/enrollments/${enrollmentId}/lessons/${lessonId}/complete`, { method: 'DELETE' }),
+
   createReview: (courseId: number, body: { grade: number; comment: string }) =>
     request<Review>(`/api/courses/${courseId}/reviews`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+
   updateReview: (courseId: number, body: { grade: number; comment: string }) =>
     request<Review>(`/api/courses/${courseId}/reviews`, {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
+
   deleteReview: (courseId: number) =>
     request<void>(`/api/courses/${courseId}/reviews`, { method: 'DELETE' }),
 
-  // ---- teacher: courses ----
+  // teacher
+  // courses 
   listMyTeacherCourses: () => request<TeacherCourseListItem[]>('/api/teacher/courses'),
+
   getMyTeacherCourse: (id: number) => request<TeacherCourseDetail>(`/api/teacher/courses/${id}`),
+
   createCourse: (body: CreateCourseRequest) =>
     request<TeacherCourseDetail>('/api/teacher/courses', {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+
   updateCourse: (id: number, body: CreateCourseRequest) =>
     request<TeacherCourseDetail>(`/api/teacher/courses/${id}`, {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
+
   deleteCourse: (id: number) =>
     request<void>(`/api/teacher/courses/${id}`, { method: 'DELETE' }),
+
   publishCourse: (id: number) =>
     request<void>(`/api/teacher/courses/${id}/publish`, { method: 'POST' }),
 
-  // ---- teacher: lessons ----
+  // lessons 
   addLesson: (courseId: number, body: { title: string; content: string }) =>
     request<LessonEdit>(`/api/teacher/courses/${courseId}/lessons`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+
   updateLesson: (id: number, body: { title: string; content: string }) =>
     request<LessonEdit>(`/api/teacher/lessons/${id}`, {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
+
   deleteLesson: (id: number) =>
     request<void>(`/api/teacher/lessons/${id}`, { method: 'DELETE' }),
+
   reorderLessons: (courseId: number, lessonIds: number[]) =>
     request<void>(`/api/teacher/courses/${courseId}/lessons/reorder`, {
       method: 'PUT',
       body: JSON.stringify({ lessonIds }),
     }),
 
-  // ---- teacher: analytics & reviews ----
+  // teacher 
+  // analytics
   getCourseAnalytics: (id: number) =>
     request<CourseAnalytics>(`/api/teacher/courses/${id}/analytics`),
+
   getEnrollmentsTimeline: (id: number, from?: string, to?: string) => {
     const params = new URLSearchParams()
     if (from) params.set('from', from)
@@ -287,6 +303,7 @@ export const api = {
     const qs = params.toString()
     return request<TimelinePoint[]>(`/api/teacher/courses/${id}/enrollments-timeline${qs ? '?' + qs : ''}`)
   },
+
   listMyTeacherReviews: (courseId?: number, page = 1, pageSize = 20) => {
     const params = new URLSearchParams()
     if (courseId != null) params.set('courseId', String(courseId))
@@ -295,7 +312,7 @@ export const api = {
     return request<PagedResult<TeacherReview>>(`/api/teacher/reviews?${params}`)
   },
 
-  // ---- teacher: earnings ----
+  // earnings 
   getEarnings: () => request<Earnings>('/api/teacher/earnings'),
   requestPayout: (amount: number) =>
     request<PayoutHistoryItem>('/api/teacher/payouts', {
@@ -303,18 +320,20 @@ export const api = {
       body: JSON.stringify({ amount }),
     }),
 
-  // ---- teacher: my profile (bio) ----
+  // my profile (bio)
   getMyTeacherProfile: () => request<MyTeacherProfile>('/api/me/teacher-profile'),
+
   updateMyTeacherProfile: (bio: string) =>
     request<MyTeacherProfile>('/api/me/teacher-profile', {
       method: 'PUT',
       body: JSON.stringify({ bio }),
     }),
 
-  // ---- public author page ----
+  // public author page 
   getAuthor: (id: number) => request<AuthorPublic>(`/api/authors/${id}`),
 
-  // ---- admin: finance ----
+  // admin 
+  // finance 
   getAdminFinanceDashboard: (from?: string, to?: string) => {
     const params = new URLSearchParams()
     if (from) params.set('from', from)
@@ -333,7 +352,7 @@ export const api = {
   refundPayment: (id: number) =>
     request<void>(`/api/admin/payments/${id}/refund`, { method: 'POST' }),
 
-  // ---- admin: payouts ----
+  // payouts 
   listAdminPayouts: (status?: string, q?: string, page = 1, pageSize = 20) => {
     const params = new URLSearchParams()
     if (status) params.set('status', status)
@@ -344,12 +363,13 @@ export const api = {
   },
   approvePayout: (id: number) =>
     request<void>(`/api/admin/payouts/${id}/approve`, { method: 'POST' }),
+
   rejectPayout: (id: number) =>
     request<void>(`/api/admin/payouts/${id}/reject`, { method: 'POST' }),
   markPayoutPaid: (id: number) =>
     request<void>(`/api/admin/payouts/${id}/mark-paid`, { method: 'POST' }),
 
-  // ---- admin: users ----
+  // users 
   listAdminUsers: (filters: { role?: string; status?: string; q?: string; page?: number; pageSize?: number } = {}) => {
     const params = new URLSearchParams()
     if (filters.role) params.set('role', filters.role)
@@ -359,6 +379,7 @@ export const api = {
     params.set('pageSize', String(filters.pageSize ?? 20))
     return request<PagedResult<AdminUser>>(`/api/admin/users?${params}`)
   },
+
   updateUserStatus: (id: number, status: 'Active' | 'Suspended') =>
     request<void>(`/api/admin/users/${id}/status`, {
       method: 'PUT',
@@ -366,7 +387,7 @@ export const api = {
     }),
 }
 
-// ---- admin types ----
+// admin types 
 
 export type TimelinePointMoney = { date: string; amount: number }
 
@@ -411,7 +432,7 @@ export type AdminUser = {
   status: 'Active' | 'Suspended'
 }
 
-// ---- teacher types ----
+// teacher types 
 
 export type TeacherCourseListItem = {
   id: number

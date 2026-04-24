@@ -4,11 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LearningPlatform.Api.Data;
 
-/// <summary>
-/// Runs on app startup. Only ensures the admin user exists — it deliberately
-/// does NOT seed any content. Demo content (and the full Udemy dataset) is
-/// loaded by the standalone <c>LearningPlatform.DataLoader</c> project.
-/// </summary>
+//not used anymore
 public static class DbSeeder
 {
     public static async Task SeedAsync(IServiceProvider services)

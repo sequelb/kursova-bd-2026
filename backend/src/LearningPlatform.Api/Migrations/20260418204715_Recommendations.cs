@@ -11,30 +11,6 @@ namespace LearningPlatform.Api.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql("""
-                -- Association-rule-based course recommendation procedure.
-                --
-                -- For a given student, finds courses that are frequently co-enrolled
-                -- with the student's existing courses by other students. This is the
-                -- "students who took X also took Y" pattern (market basket analysis).
-                --
-                -- Algorithm:
-                --   1. Find the student's enrolled courses ("my courses").
-                --   2. For each of my courses, find other students enrolled in the same course.
-                --   3. For each of those "peer" students, find what OTHER courses they are
-                --      enrolled in that I am NOT enrolled in.
-                --   4. Count co-occurrences per (shared_course, recommended_course) pair.
-                --      This is the "support" of the association rule {shared} → {recommended}.
-                --   5. For each recommended course, sum the co-counts across all rules
-                --      (total score) and pick the strongest individual rule for the
-                --      human-readable "reason" string.
-                --   6. Return the top N by score.
-                --
-                -- Cold-start fallback: if the student has zero enrollments, return the
-                -- most popular published courses on the platform.
-                --
-                -- Callable from psql:  SELECT * FROM get_recommendations(42);
-                -- Callable from psql:  SELECT * FROM get_recommendations(42, 10);
-
                 CREATE OR REPLACE FUNCTION get_recommendations(
                     target_student_id INT,
                     max_results INT DEFAULT 6
@@ -47,7 +23,7 @@ namespace LearningPlatform.Api.Migrations
                     SELECT COUNT(*) INTO student_course_count
                     FROM enrollments WHERE student_id = target_student_id;
 
-                    -- Cold start: no enrollments → recommend popular courses
+                    -- cold start: no enrollments : recommend popular courses
                     IF student_course_count = 0 THEN
                         RETURN QUERY
                         SELECT
@@ -63,14 +39,12 @@ namespace LearningPlatform.Api.Migrations
                         RETURN;
                     END IF;
 
-                    -- Main: association rules
                     RETURN QUERY
                     WITH my_courses AS (
                         SELECT e.course_id
                         FROM enrollments e
                         WHERE e.student_id = target_student_id
                     ),
-                    -- For each of my courses, find peer students and their other enrollments
                     peer_enrollments AS (
                         SELECT
                             e_mine.course_id   AS shared_course_id,
@@ -85,7 +59,6 @@ namespace LearningPlatform.Api.Migrations
                         WHERE e_mine.student_id = target_student_id
                           AND e_other.course_id NOT IN (SELECT mc.course_id FROM my_courses mc)
                     ),
-                    -- Count distinct peers per (shared, recommended) rule
                     rule_counts AS (
                         SELECT
                             pe.rec_course_id,
@@ -94,7 +67,6 @@ namespace LearningPlatform.Api.Migrations
                         FROM peer_enrollments pe
                         GROUP BY pe.rec_course_id, pe.shared_course_id
                     ),
-                    -- For each recommended course, find the strongest rule
                     best_rule_per_rec AS (
                         SELECT DISTINCT ON (rc.rec_course_id)
                             rc.rec_course_id,
@@ -103,7 +75,6 @@ namespace LearningPlatform.Api.Migrations
                         FROM rule_counts rc
                         ORDER BY rc.rec_course_id, rc.co_count DESC
                     ),
-                    -- Aggregate total score and attach the best rule's info
                     scored AS (
                         SELECT
                             rc.rec_course_id,

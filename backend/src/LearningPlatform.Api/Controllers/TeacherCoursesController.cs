@@ -14,8 +14,6 @@ public class TeacherCoursesController(AppDbContext db) : ControllerBase
 {
     private int CurrentUserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    // ---- courses ----
-
     [HttpGet("api/teacher/courses")]
     public async Task<ActionResult<List<TeacherCourseListItemDto>>> List()
     {
@@ -152,7 +150,7 @@ public class TeacherCoursesController(AppDbContext db) : ControllerBase
         return NoContent();
     }
 
-    // ---- lessons ----
+    // lessons 
 
     [HttpPost("api/teacher/courses/{courseId:int}/lessons")]
     public async Task<ActionResult<LessonEditDto>> AddLesson(int courseId, CreateLessonRequest req)
@@ -224,7 +222,6 @@ public class TeacherCoursesController(AppDbContext db) : ControllerBase
         db.Lessons.Remove(lesson);
         await db.SaveChangesAsync();
 
-        // shift everything after the deleted lesson down by 1.
         var laterLessons = await db.Lessons
             .Where(l => l.CourseId == courseId && l.OrderNumber > deletedOrder)
             .OrderBy(l => l.OrderNumber)
@@ -251,6 +248,8 @@ public class TeacherCoursesController(AppDbContext db) : ControllerBase
         await using var tx = await db.Database.BeginTransactionAsync();
         var lessonsById = course.Lessons.ToDictionary(l => l.Id);
 
+        // Hack
+        // shift everything after the deleted lesson down by 1.
         // change everything to negative slots
         var temp = -1;
         foreach (var l in course.Lessons) l.OrderNumber = temp--;

@@ -65,7 +65,8 @@ export function LessonPlayer() {
   return (
     <div className="p-8">
       <div className="flex gap-8">
-        {/* Left */}
+
+        {/* left */}
         <div className="flex-[7]">
           <h1 className="mb-4 text-2xl font-bold text-gray-900">{l.title}</h1>
 
@@ -135,7 +136,7 @@ export function LessonPlayer() {
           )}
         </div>
 
-        {/* Right */}
+        {/* right */}
         <div className="flex-[3]">
           <div className="sticky top-8 border-2 border-gray-800 bg-white">
             <div className="border-b-2 border-gray-800 bg-gray-100 p-4">

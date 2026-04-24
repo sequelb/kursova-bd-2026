@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace LearningPlatform.Api.Dtos;
 
-// ---- courses ----
+// coursess
 
 public record TeacherCourseListItemDto(
     int Id,
@@ -50,7 +50,7 @@ public record UpdateLessonRequest(
     [Required, MinLength(1), MaxLength(50000)] string Content);
 public record ReorderLessonsRequest([Required] int[] LessonIds);
 
-// ---- analytics ----
+// analytics 
 
 public record AnalyticsRecentStudentDto(string FirstName, string LastName, DateTime EnrolledAt, int Progress);
 
@@ -65,7 +65,7 @@ public record CourseAnalyticsDto(
 
 public record TimelinePointDto(DateTime Date, int Count);
 
-// ---- reviews ----
+// reviews
 
 public record TeacherReviewDto(
     int CourseId,
@@ -76,7 +76,7 @@ public record TeacherReviewDto(
     string Comment,
     DateTime CreatedAt);
 
-// ---- earnings & payouts ----
+// earnings payouts 
 
 public record PayoutHistoryItemDto(int Id, decimal Amount, string Status, DateTime RequestedAt);
 
@@ -84,7 +84,7 @@ public record EarningsDto(decimal Balance, List<PayoutHistoryItemDto> History);
 
 public record CreatePayoutRequest([Range(0.01, 999999)] decimal Amount);
 
-// ---- teacher profile (own) ----
+// teacher_profile 
 
 public record MyTeacherProfileDto(string Bio, decimal Balance);
 public record UpdateMyTeacherProfileRequest([MaxLength(2000)] string Bio);

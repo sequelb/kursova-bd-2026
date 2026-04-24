@@ -4,7 +4,7 @@ using LearningPlatform.DataLoader;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-// ---- arg parsing ----
+// arg parsing
 var dev = args.Contains("--dev");
 var reset = args.Contains("--reset");
 var help = args.Contains("--help") || args.Contains("-h");
@@ -31,11 +31,10 @@ if (help)
 
 await using var db = DbContextFactory.Create();
 
-// ---- ensure schema is up to date ----
-Console.WriteLine("Applying any pending migrations...");
+Console.WriteLine("applying any pending migrations...");
 await db.Database.MigrateAsync();
 
-// ---- check existing data ----
+// check for any existing data 
 var hasContent = await db.Courses.AnyAsync() || await db.Users.CountAsync(u => u.Role != Roles.Admin) > 0;
 
 if (hasContent)
@@ -54,39 +53,27 @@ if (hasContent)
     await ResetAsync(db);
 }
 
-// ---- ensure admin exists ----
 await EnsureAdminAsync(db);
 
-// ---- run the chosen mode ----
-if (dev)
-    await DevSeeder.RunAsync(db);
-else
     await FullLoader.RunAsync(db, limit, enrollFrom, enrollTo);
 
 return 0;
 
-// ---- locals ----
+// locals
 
 static void PrintHelp()
 {
-    Console.WriteLine("LearningPlatform.DataLoader");
+    Console.WriteLine("flags:");
+    Console.WriteLine("  --reset              wipe existing content first ");
+    Console.WriteLine("  --limit N            only import the first N rows from csv ");
+    Console.WriteLine("  --enroll-from DATE   earliest enrollment date (default : course's publication date)");
+    Console.WriteLine("  --enroll-to DATE     latest enrollment date (default: today)");
+    Console.WriteLine("  -h, --help           show this help");
     Console.WriteLine();
-    Console.WriteLine("Modes:");
-    Console.WriteLine("  (no flag)        Load the full Udemy CSV (~3700 courses, ~5000 enrollments)");
-    Console.WriteLine("  --dev            Load the small hardcoded dev seed (sarah/john/alice + 6 courses)");
-    Console.WriteLine();
-    Console.WriteLine("Flags:");
-    Console.WriteLine("  --reset              Wipe existing content first (skips the confirm prompt)");
-    Console.WriteLine("  --limit N            Only import the first N rows from the CSV (full mode)");
-    Console.WriteLine("  --enroll-from DATE   Earliest enrollment date (default: course's publication date)");
-    Console.WriteLine("  --enroll-to DATE     Latest enrollment date (default: today)");
-    Console.WriteLine("  -h, --help           Show this help");
-    Console.WriteLine();
-    Console.WriteLine("Examples:");
+    Console.WriteLine("examples:");
     Console.WriteLine("  dotnet run --project src/LearningPlatform.DataLoader");
-    Console.WriteLine("  dotnet run --project src/LearningPlatform.DataLoader -- --dev");
     Console.WriteLine("  dotnet run --project src/LearningPlatform.DataLoader -- --reset --limit 500");
-    Console.WriteLine("  dotnet run --project src/LearningPlatform.DataLoader -- --reset --enroll-from 2025-01-01 --enroll-to 2026-04-15");
+    Console.WriteLine("  dotnet run --project src/LearningPlatform.DataLoader -- --reset --enroll-from 2025-01-01 --enroll-to 2026-04-01");
 }
 
 static async Task ResetAsync(AppDbContext db)

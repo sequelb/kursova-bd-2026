@@ -77,7 +77,8 @@ export function Catalog() {
 
   return (
     <div>
-      {/* Filter Bar */}
+      {/* filter bar */}
+
       <div className="border-b-2 border-gray-800 bg-gray-100 p-4">
         <div className="flex items-center gap-4 flex-wrap">
           <button
@@ -159,7 +160,7 @@ export function Catalog() {
         )}
       </div>
 
-      {/* Main Content */}
+      {/* main content */}
       <div className="p-8">
         <h1 className="mb-6 text-2xl font-bold text-gray-900">Course Catalog</h1>
 

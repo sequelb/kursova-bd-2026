@@ -23,7 +23,7 @@ export function Author() {
 
   return (
     <div className="p-8">
-      {/* Header */}
+      {/* header */}
       <div className="border-2 border-gray-800 bg-white p-6 mb-8">
         <div className="flex items-start gap-4">
           <div className="w-16 h-16 border-2 border-gray-800 bg-gray-200 flex items-center justify-center flex-shrink-0">
@@ -45,7 +45,7 @@ export function Author() {
         </div>
       </div>
 
-      {/* Courses */}
+      {/* courses */}
       <h2 className="text-xl font-bold text-gray-900 mb-4">Courses</h2>
       {a.courses.length === 0 ? (
         <div className="border-2 border-gray-400 bg-white p-8 text-center text-gray-600">

@@ -4,12 +4,6 @@ using Microsoft.AspNetCore.Identity;
 
 namespace LearningPlatform.DataLoader;
 
-/// <summary>
-/// The small predictable dev seed: 5 categories, 2 teachers (sarah/john),
-/// 1 student (alice), 6 published courses with 4 lessons each, plus a sample
-/// enrollment + review so the catalog has rating data on first run.
-/// Used for `--dev` mode.
-/// </summary>
 internal static class DevSeeder
 {
     public static async Task RunAsync(AppDbContext db)
@@ -18,12 +12,12 @@ internal static class DevSeeder
 
         Console.WriteLine("Seeding dev content (small fixture)...");
 
-        // ---- categories ----
+        // categories 
         var catNames = new[] { "Programming", "JavaScript", "Web Development", "Data Science", "Design" };
         var categories = catNames.Select(n => new Category { Name = n }).ToList();
         db.Categories.AddRange(categories);
 
-        // ---- teachers ----
+        // teachers 
         var sarah = MakeUser(hasher, "sarah@local", "Sarah", "Johnson", Roles.Teacher);
         var john = MakeUser(hasher, "john@local", "John", "Smith", Roles.Teacher);
         db.Users.AddRange(sarah, john);
@@ -33,12 +27,12 @@ internal static class DevSeeder
             new TeacherProfile { UserId = sarah.Id, Bio = "Frontend engineer." },
             new TeacherProfile { UserId = john.Id, Bio = "Backend & data." });
 
-        // ---- student ----
+        // student 
         var alice = MakeUser(hasher, "alice@local", "Alice", "Brown", Roles.Student);
         db.Users.Add(alice);
         await db.SaveChangesAsync();
 
-        // ---- courses ----
+        // courses 
         Course MakeCourse(int authorId, string title, decimal price, string level, params string[] cats) =>
             new()
             {
@@ -64,7 +58,7 @@ internal static class DevSeeder
         db.Courses.AddRange(courses);
         await db.SaveChangesAsync();
 
-        // ---- lessons (4 per course) ----
+        // lessons (4 percourse)
         foreach (var course in courses)
         {
             for (var i = 1; i <= 4; i++)
@@ -81,7 +75,7 @@ internal static class DevSeeder
         }
         await db.SaveChangesAsync();
 
-        // ---- one enrollment + review for Alice on React for Beginners (so catalog has rating data) ----
+        // one enrollment + review for alice on React for Beginners (so that catalog has rating data) 
         var react = courses[0];
         var enrollment = new Enrollment { StudentId = alice.Id, CourseId = react.Id };
         db.Enrollments.Add(enrollment);

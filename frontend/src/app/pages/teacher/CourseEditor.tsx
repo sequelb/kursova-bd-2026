@@ -182,7 +182,7 @@ export function CourseEditor() {
                 type="number"
                 min={0}
                 max={9999}
-                step="0.01"
+                step="1"
                 value={form.price}
                 onChange={(e) => patch('price', Number(e.target.value))}
                 className="w-full mt-1 px-3 py-2 border-2 border-gray-800 bg-white"

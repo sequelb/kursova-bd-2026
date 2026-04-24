@@ -67,7 +67,7 @@ public class AdminPayoutsController(AppDbContext db) : ControllerBase
 
         payout.Status = toStatus;
         await db.SaveChangesAsync();
-        // trg_payouts_balance fires automatically; rejected payouts release the locked funds.
+        // trg_payouts_balance triggers automatically
         return NoContent();
     }
 }

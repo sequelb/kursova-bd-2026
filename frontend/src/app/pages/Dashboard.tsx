@@ -15,7 +15,7 @@ export function Dashboard() {
     queryFn: api.getRecommendations,
   })
 
-  const [showReasons, setShowReasons] = useState(true)
+  const showReasons = true;
 
   return (
     <div className="p-8">
@@ -84,6 +84,7 @@ export function Dashboard() {
             <h2 className="text-2xl font-bold text-gray-900">Recommended Courses</h2>
             <p className="text-sm text-gray-600">Based on what students like you enrolled in</p>
           </div>
+{/*
           <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -93,6 +94,7 @@ export function Dashboard() {
             />
             Show explanations
           </label>
+*/}
         </div>
 
         {recommendations.isPending && <p className="text-gray-600">Loading…</p>}

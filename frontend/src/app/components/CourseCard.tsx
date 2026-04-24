@@ -74,7 +74,7 @@ export function CourseCard({
       <p className="text-sm text-gray-600 mb-2">
         Published: {new Date(createdAt).toISOString().slice(0, 10)}
       </p>
-      <p className="font-bold text-gray-900 mb-4">${price.toFixed(2)}</p>
+      <p className="font-bold text-gray-900 mb-4 ">${price.toFixed(2)}</p>
       <Link
         to={`/courses/${id}`}
         className="block w-full mt-auto py-2 text-center border-2 border-gray-800 bg-gray-900 text-white hover:bg-gray-700 transition-colors"

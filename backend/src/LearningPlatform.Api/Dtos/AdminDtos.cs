@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace LearningPlatform.Api.Dtos;
 
-// ---- finance dashboard ----
 
 public record AdminFinanceDashboardDto(
     decimal GrossRevenue,
@@ -15,7 +14,6 @@ public record AdminFinanceDashboardDto(
 
 public record TimelinePointMoneyDto(DateTime Date, decimal Amount);
 
-// ---- payments ----
 
 public record AdminPaymentDto(
     int Id,
@@ -28,7 +26,6 @@ public record AdminPaymentDto(
     decimal Amount,
     string Status);
 
-// ---- payouts ----
 
 public record AdminPayoutDto(
     int Id,
@@ -39,7 +36,6 @@ public record AdminPayoutDto(
     decimal Amount,
     string Status);
 
-// ---- users ----
 
 public record AdminUserDto(
     int Id,

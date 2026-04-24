@@ -1,10 +1,7 @@
 import { Navigate } from 'react-router'
 import { useAuth } from '../../lib/auth'
 
-/**
- * Redirects the index route based on the current user's role.
- * Student → My Learning, Teacher → My Courses, Admin → Financial Dashboard.
- */
+ // redirects the index route based on the current user's role
 export function HomeRedirect() {
   const { user } = useAuth()
   if (!user) return null

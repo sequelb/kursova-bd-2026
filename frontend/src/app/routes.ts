@@ -36,7 +36,7 @@ export const router = createBrowserRouter([
     path: '/',
     element: createElement(RequireAuth, null, createElement(Layout)),
     children: [
-      // Index — role-based redirect
+      // index — role-based redirect
       { index: true, Component: HomeRedirect },
 
       // Student

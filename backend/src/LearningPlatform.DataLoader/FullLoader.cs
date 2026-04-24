@@ -10,24 +10,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LearningPlatform.DataLoader;
 
-/// <summary>
-/// Loads the Udemy Courses Kaggle dataset into the database.
-/// CSV columns: course_id, course_title, url, is_paid, price, num_subscribers,
-/// num_reviews, num_lectures, level, content_duration, published_timestamp, subject.
-///
-/// Data lineage by table:
-///   categories       — REAL (distinct `subject` values from CSV)
-///   courses          — REAL (every CSV row → 1 course; title/price/level/created_at)
-///   lessons          — HYBRID (count from `num_lectures` capped at MaxLessonsPerCourse;
-///                              content is generated lorem ipsum)
-///   users (teachers) — GENERATED (random names from NamePool, 1/teacher_count of CSV rows)
-///   users (students) — GENERATED (random names from NamePool)
-///   enrollments      — HYBRID (course is sampled weighted by `num_subscribers`;
-///                              student is uniformly random; dates spread over configurable range)
-/// </summary>
 internal static partial class FullLoader
 {
-    private const int CoursesPerTeacher = 6;   // target avg  varies +-2
+    private const int CoursesPerTeacher = 6;   // target avg
     private const int StudentsPerCourse = 5;    // target avg enrollments per course
     private const int MaxLessonsPerCourse = 8;
     private const double ReviewProbability = 0.8; // 80% of enrollments have a review
@@ -35,6 +20,7 @@ internal static partial class FullLoader
     private static readonly string CsvPath = Path.Combine(
         AppContext.BaseDirectory, "data", "courses.csv");
 
+    // ?
     // Matches strings that contain ONLY basic Latin letters, digits, common punctuation, and whitespace.
     // Rows whose title fails this check are skipped (non-Latin/emoji titles render as tofu).
     [GeneratedRegex(@"^[\x20-\x7E]+$")]
@@ -50,7 +36,7 @@ internal static partial class FullLoader
         }
 
         var hasher = new PasswordHasher<User>();
-        var rng = new Random(42); // deterministic
+        var rng = new Random(42);
         var enrollTo = enrollToOverride ?? DateTime.UtcNow;
 
         Console.WriteLine("Reading CSV...");
@@ -88,10 +74,10 @@ internal static partial class FullLoader
         Console.WriteLine($"  + {categories.Count} categories");
 
         // teachers 
-        
+
         // teacher count is based on course count 
         // each teacher has ~CoursesPerTeacher courses.
-       
+
         var teacherCount = Math.Max(50, rows.Count / CoursesPerTeacher);
         Console.WriteLine($"Generating {teacherCount} teachers...");
 
@@ -147,7 +133,6 @@ internal static partial class FullLoader
         Console.WriteLine("inserting courses...");
 
         var courses = new List<Course>();
-        var courseSubscribers = new List<int>();
         for (var i = 0; i < rows.Count; i++)
         {
             var r = rows[i];
@@ -159,9 +144,9 @@ internal static partial class FullLoader
 
             int teacherIdx;
             if (category is not null && rng.NextDouble() > 0.1
-                && teachersByCategory.TryGetValue(category.Id, out var catTeachers) && catTeachers.Count > 0)
+                && teachersByCategory.TryGetValue(category.Id, out var categoryTeachers) && categoryTeachers.Count > 0)
             {
-                teacherIdx = catTeachers[rng.Next(catTeachers.Count)];
+                teacherIdx = categoryTeachers[rng.Next(categoryTeachers.Count)];
             }
             else
             {
@@ -180,7 +165,6 @@ internal static partial class FullLoader
                 Categories = category is null ? [] : [category],
             };
             courses.Add(course);
-            courseSubscribers.Add(Math.Max(1, r.NumSubscribers));
         }
 
         const int chunkSize = 500;
@@ -193,9 +177,9 @@ internal static partial class FullLoader
         Console.WriteLine();
         Console.WriteLine($"  + {courses.Count} courses");
 
-        
+
         // lessons 
-        
+
 
         Console.WriteLine("Inserting lessons...");
         var totalLessons = 0;
@@ -257,8 +241,7 @@ internal static partial class FullLoader
                 PasswordHash = hasher.HashPassword(null!, "password123"),
             });
 
-            // pick 1-2 categories
-            var prefCount = rng.Next(1, 3); // 1 or 2
+            var prefCount = rng.Next(1, 3); // 1 or 2 favourite categories
             var prefs = new HashSet<int>();
             while (prefs.Count < prefCount && prefs.Count < categories.Count)
                 prefs.Add(categories[rng.Next(categories.Count)].Id);
@@ -270,7 +253,7 @@ internal static partial class FullLoader
 
         Console.WriteLine($"  + {students.Count} students (each with 1-2 preferred categories)");
 
-        var targetEnrollments = Math.Min(courses.Count * StudentsPerCourse, students.Count * 30);
+        var targetEnrollmentsCount = Math.Min(courses.Count * StudentsPerCourse, students.Count * 30);
 
         // category -> course index  for enrollment with bias
         var coursesByCategory = new Dictionary<int, List<int>>(); // categoryId: [courseIndexes]
@@ -288,25 +271,15 @@ internal static partial class FullLoader
         }
 
         // enrollments 
-        
+
 
         Console.WriteLine("Generating enrollments...");
-        var totalSubs = courseSubscribers.Aggregate(0L, (acc, s) => acc + s);
-        var cum = new long[courseSubscribers.Count];
-        long running = 0;
-        for (var i = 0; i < courseSubscribers.Count; i++)
-        {
-            running += courseSubscribers[i];
-            cum[i] = running;
-        }
-
-        // targetEnrollments already computed above from proportions
         var taken = new HashSet<(int sid, int cid)>();
         var enrollmentList = new List<(Enrollment e, Payment p)>();
         var attempts = 0;
-        var maxAttempts = targetEnrollments * 4;
+        var maxAttempts = targetEnrollmentsCount * 4;
 
-        while (taken.Count < targetEnrollments && attempts < maxAttempts)
+        while (taken.Count < targetEnrollmentsCount && attempts < maxAttempts)
         {
             attempts++;
             var studentIdx = rng.Next(students.Count);
@@ -316,8 +289,9 @@ internal static partial class FullLoader
             int courseIdx;
             if (rng.NextDouble() < 0.7 && prefs.Count > 0 && coursesByCategory.Count > 0)
             {
-                // 70% chance: pick a course from a preferred category
+                // 70% chance  to pick a course from a preferred category
                 var prefCatId = prefs.ElementAt(rng.Next(prefs.Count));
+                // take random course with the category
                 if (coursesByCategory.TryGetValue(prefCatId, out var catCourses) && catCourses.Count > 0)
                     courseIdx = catCourses[rng.Next(catCourses.Count)];
                 else
@@ -325,9 +299,8 @@ internal static partial class FullLoader
             }
             else
             {
-                // 30% chance: weighted-random by subscribers (popularity)
-                var roll = (long)(rng.NextDouble() * totalSubs);
-                courseIdx = BinarySearchUpper(cum, roll);
+                // 30% chance to pick any random course
+                courseIdx = rng.Next(courses.Count);
             }
 
             var course = courses[courseIdx];
@@ -360,22 +333,26 @@ internal static partial class FullLoader
                 db.Enrollments.AddRange(enrollmentList.Select(x => x.e));
                 db.Payments.AddRange(enrollmentList.Select(x => x.p));
                 await db.SaveChangesAsync();
-                Console.Write($"\r  inserting enrollments... {taken.Count}/{targetEnrollments}");
+                Console.Write($"\r  inserting enrollments... {taken.Count}/{targetEnrollmentsCount}");
                 enrollmentList.Clear();
             }
         }
-        if (enrollmentList.Count > 0)
-        {
-            db.Enrollments.AddRange(enrollmentList.Select(x => x.e));
-            db.Payments.AddRange(enrollmentList.Select(x => x.p));
-            await db.SaveChangesAsync();
-        }
+
+        db.Enrollments.AddRange(enrollmentList.Select(x => x.e));
+        db.Payments.AddRange(enrollmentList.Select(x => x.p));
+        await db.SaveChangesAsync();
+
         Console.WriteLine();
         Console.WriteLine($"  + {taken.Count} enrollments (and matching payments)");
 
-        // ---------- 7. lesson progress (random completion for each enrollment) ----------
+
+        // lesson progress 
+
+
         Console.WriteLine("Generating lesson progress...");
-        // Build a courseId → lessonIds map
+
+
+        // courseId -> lessonIds map
         var lessonsByCourse = await db.Lessons
             .GroupBy(l => l.CourseId)
             .ToDictionaryAsync(g => g.Key, g => g.Select(l => l.Id).ToList());
@@ -387,9 +364,10 @@ internal static partial class FullLoader
         foreach (var enrollment in allEnrollments)
         {
             if (!lessonsByCourse.TryGetValue(enrollment.CourseId, out var lessonIds)) continue;
-            // Each student completes 0-100% of lessons (weighted toward partial: avg ~50%)
-            var completionRatio = rng.NextDouble() * rng.NextDouble() + rng.NextDouble() * 0.3;
-            completionRatio = Math.Min(1.0, completionRatio);
+
+            var completionRatio = rng.NextDouble();
+            // completionRatio = Math.Min(1.0, completionRatio);
+
             var lessonsToComplete = (int)(lessonIds.Count * completionRatio);
 
             for (var i = 0; i < lessonsToComplete; i++)
@@ -419,10 +397,11 @@ internal static partial class FullLoader
         }
         Console.WriteLine();
         Console.WriteLine($"  + {totalProgress} lesson progress records");
-        // Note: trigger trg_lesson_progress_recompute fires per row and updates
-        // enrollments.progress automatically.
 
-        // ---------- 8. reviews (~80% of ALL enrollments, not just completed) ----------
+
+        //  reviews 
+
+
         Console.WriteLine("Generating reviews...");
         var reviewComments = new[]
         {
@@ -440,13 +419,12 @@ internal static partial class FullLoader
             "A bit too theoretical for my taste, but still useful.",
         };
 
-        // Any enrolled student can leave a review (the app allows it). ~80% do.
         var reviewBatch = new List<Review>();
         foreach (var enrollment in allEnrollments)
         {
             if (rng.NextDouble() > ReviewProbability) continue;
 
-            // Bias grades: most reviews are 3-5, few are 1-2
+            //biased
             var grade = rng.NextDouble() switch
             {
                 < 0.05 => 1,
@@ -473,41 +451,48 @@ internal static partial class FullLoader
                 reviewBatch.Clear();
             }
         }
-        if (reviewBatch.Count > 0)
-        {
-            db.Reviews.AddRange(reviewBatch);
-            await db.SaveChangesAsync();
-        }
+
+        db.Reviews.AddRange(reviewBatch);
+        await db.SaveChangesAsync();
+
         var totalReviews = await db.Reviews.CountAsync();
         Console.WriteLine();
         Console.WriteLine($"  + {totalReviews} reviews (~{(int)(ReviewProbability * 100)}% of {allEnrollments.Count} enrollments)");
 
-        // ---------- 9. teacher payouts (some random payout requests) ----------
+
+        // teacher payouts
+
+
         Console.WriteLine("Generating teacher payouts...");
         var payoutStatuses = new[] { PayoutStatus.Pending, PayoutStatus.Approved, PayoutStatus.Paid, PayoutStatus.Rejected };
+        var balances = await db.TeacherProfiles.ToDictionaryAsync(tp => tp.UserId, tp => tp.Balance);
         var payoutBatch = new List<Payout>();
         foreach (var teacher in teachers)
         {
-            // Each teacher makes 0-3 payout requests
-            var payoutCount = rng.Next(0, 4);
-            for (var i = 0; i < payoutCount; i++)
+            var earnings = balances.GetValueOrDefault(teacher.Id, 0m);
+            if (earnings <= 0) continue;
+            var remaining = earnings;
+            var payoutCount = rng.Next(0, 4); // each teacher requests 0-3 payouts
+            for (var i = 0; i < payoutCount && remaining > 10m; i++)
             {
-                var amount = Math.Round((decimal)(rng.NextDouble() * 200 + 10), 2); // $10-$210
-                var statusIdx = rng.Next(payoutStatuses.Length);
+                var maxAmount = Math.Min(remaining * 0.6m, 200m);
+                var amount = Math.Round(Math.Max(10m, (decimal)rng.NextDouble() * maxAmount), 2);
+                var status = payoutStatuses[rng.Next(payoutStatuses.Length)];
                 var requestedAt = RandomDateBetween(rng, enrollTo.AddMonths(-6), enrollTo);
                 payoutBatch.Add(new Payout
                 {
                     TeacherId = teacher.Id,
                     Amount = amount,
-                    Status = payoutStatuses[statusIdx],
+                    Status = status,
                     RequestedAt = requestedAt,
                 });
+                if (status != PayoutStatus.Rejected)
+                    remaining -= amount;
             }
         }
         db.Payouts.AddRange(payoutBatch);
         await db.SaveChangesAsync();
         Console.WriteLine($"  + {payoutBatch.Count} teacher payouts");
-        // The trg_payouts_balance trigger recomputes each teacher's balance.
 
         Console.WriteLine();
         Console.WriteLine("Done.");
@@ -515,7 +500,7 @@ internal static partial class FullLoader
                           $"{categories.Count + teachers.Count + students.Count + courses.Count + totalLessons + taken.Count + totalProgress + totalReviews + payoutBatch.Count}");
     }
 
-    // ---- helpers ----
+    // helpers functions
 
     private static List<UdemyRow> ReadCsv(string path)
     {
@@ -559,20 +544,8 @@ internal static partial class FullLoader
     private static string Truncate(string s, int max) =>
         s.Length <= max ? s : s.Substring(0, max);
 
-    private static int BinarySearchUpper(long[] cum, long target)
-    {
-        int lo = 0, hi = cum.Length - 1;
-        while (lo < hi)
-        {
-            var mid = (lo + hi) / 2;
-            if (cum[mid] <= target) lo = mid + 1;
-            else hi = mid;
-        }
-        return lo;
-    }
 
-    // ---- CSV row mapping ----
-
+    // CSV row mapping 
     private sealed class UdemyRow
     {
         [Name("course_id")] public int CourseId { get; set; }

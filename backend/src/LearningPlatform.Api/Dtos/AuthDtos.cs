@@ -12,4 +12,5 @@ public record RegisterRequest(
 public record LoginRequest(
     [Required, EmailAddress] string Email,
     [Required] string Password);
+
 public record UserResponse(int Id, string Email, string FirstName, string LastName, string Role);

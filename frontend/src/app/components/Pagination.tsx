@@ -26,7 +26,7 @@ export function Pagination({ page, pageSize, totalCount, onPageChange }: Props) 
   return (
     <div className="flex items-center justify-between mt-6">
       <div className="text-sm text-gray-700">
-        Showing {from}–{to} of {totalCount}
+        Showing {from}-{to} of {totalCount}
       </div>
       <div className="flex items-center gap-1">
         <button

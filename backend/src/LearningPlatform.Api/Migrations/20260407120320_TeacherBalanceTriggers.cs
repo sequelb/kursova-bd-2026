@@ -11,9 +11,9 @@ namespace LearningPlatform.Api.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql("""
-                -- Helper procedure: recompute a single teacher's balance from scratch.
+                -- helper runction
                 -- balance = sum(completed payments to teacher's courses)
-                --         - sum(non-rejected payouts to teacher)
+                --         - sum(not rejected payouts to teacher)
                 CREATE OR REPLACE FUNCTION recompute_teacher_balance(target_teacher_id INT)
                 RETURNS VOID AS $$
                 BEGIN
@@ -34,7 +34,8 @@ namespace LearningPlatform.Api.Migrations
                 END;
                 $$ LANGUAGE plpgsql;
 
-                -- Trigger function: when a payment row changes, recompute the affected teacher's balance.
+                -- trigger function 
+                -- when a payment row changes recompute the teacher's balance
                 CREATE OR REPLACE FUNCTION trg_payments_recompute_balance()
                 RETURNS TRIGGER AS $$
                 DECLARE
@@ -52,7 +53,10 @@ namespace LearningPlatform.Api.Migrations
                 END;
                 $$ LANGUAGE plpgsql;
 
-                -- Trigger function: when a payout row changes, recompute the affected teacher's balance.
+
+                -- trigger function 
+                -- when a payout row changes recompute the teacher's balance
+
                 CREATE OR REPLACE FUNCTION trg_payouts_recompute_balance()
                 RETURNS TRIGGER AS $$
                 BEGIN

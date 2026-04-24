@@ -20,12 +20,13 @@ public class AdminFinanceController(AppDbContext db) : ControllerBase
         // Postgres `timestamp with time zone` requires DateTimeKind.Utc, so
         // strip whatever kind the model binder produced and re-stamp it as UTC.
         var toDate = DateTime.SpecifyKind((to ?? DateTime.UtcNow).Date, DateTimeKind.Utc);
-        var fromDate = DateTime.SpecifyKind((from ?? toDate.AddDays(-29)).Date, DateTimeKind.Utc);
+        var fromDate = DateTime.SpecifyKind((from ?? toDate.AddMonths(-1)).Date, DateTimeKind.Utc);
+
         if (fromDate > toDate) return BadRequest(new { error = "Start date cannot be after end date." });
 
-        // For "≤ to" inclusive comparisons we want < (to + 1 day)
+        // inclusive <= comparison
         var toExclusive = toDate.AddDays(1);
-        // Cap the timeline length to avoid pathological responses
+
         var totalDays = (toExclusive - fromDate).Days;
 
         var grossRevenue = await db.Payments
@@ -43,7 +44,6 @@ public class AdminFinanceController(AppDbContext db) : ControllerBase
                      && p.RequestedAt >= fromDate && p.RequestedAt < toExclusive)
             .SumAsync(p => (decimal?)p.Amount) ?? 0m;
 
-        // Pending payouts are a current snapshot — not filtered by date.
         var pendingPayouts = await db.Payouts
             .Where(p => p.Status == PayoutStatus.Pending)
             .ToListAsync();
@@ -131,19 +131,20 @@ public class AdminFinanceController(AppDbContext db) : ControllerBase
         if (payment.Status == PaymentStatus.Refunded)
             return BadRequest(new { error = "Payment is already refunded." });
 
+        //transatctin
         await using var tx = await db.Database.BeginTransactionAsync();
 
-        // Flip status — trigger trg_payments_balance recomputes the teacher's balance.
+        // triggers trg_payments_balance recomputes the teacher's balance.
         payment.Status = PaymentStatus.Refunded;
 
-        // Revoke access: delete the matching enrollment. lesson_progress and review
-        // cascade-delete with the enrollment.
+        // cascade-delete with the enrollment
         var enrollment = await db.Enrollments
             .SingleOrDefaultAsync(e => e.StudentId == payment.StudentId && e.CourseId == payment.CourseId);
         if (enrollment is not null) db.Enrollments.Remove(enrollment);
 
         await db.SaveChangesAsync();
         await tx.CommitAsync();
+
         return NoContent();
     }
 }

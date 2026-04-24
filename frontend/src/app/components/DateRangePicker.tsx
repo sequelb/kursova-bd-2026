@@ -66,7 +66,7 @@ export function DateRangePicker({ from, to, onChange }: Props) {
   )
 }
 
-/** Hook that wraps DateRangePicker state with debouncing for queries. */
+/** hook that wraps DateRangePicker state with debouncing for queries. */
 export function useDateRange(defaultDays = 29) {
   const [from, setFrom] = useState(daysAgo(defaultDays))
   const [to, setTo] = useState(todayStr())
