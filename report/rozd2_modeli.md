@@ -71,143 +71,38 @@
 
 Схема бази даних складається з 11 таблиць. Усі назви таблиць та стовпців використовують формат snake_case, що забезпечується бібліотекою EFCore.NamingConventions. Нижче подано опис кожної таблиці.
 
-Таблиця *users* (табл. 2.1) зберігає облікові записи усіх користувачів системи.
+*users* — таблиця облікових записів усіх користувачів системи. Роль та статус зберігаються як текстові стовпці з обмеженнями CHECK на допустимі значення, що спрощує еволюцію схеми порівняно з типами ENUM. Електронна пошта має обмеження UNIQUE для запобігання дублікатів.
+Атрибути: id (integer, PK, автоінкремент); first_name (varchar(100), NOT NULL); last_name (varchar(100), NOT NULL); email (varchar(255), NOT NULL, UNIQUE); password_hash (text, NOT NULL); role (varchar(20), NOT NULL, CHECK IN ('Admin', 'Teacher', 'Student')); status (varchar(20), NOT NULL, DEFAULT 'Active', CHECK IN ('Active', 'Suspended')).
 
-Таблиця 2.1.
-Структура таблиці users
+*teacher_profiles* — розширення для користувачів із роллю «Викладач». Зв'язок 1:1 із таблицею users через первинний ключ user_id, що одночасно є зовнішнім ключем. При видаленні користувача профіль видаляється каскадно (ON DELETE CASCADE). Поле balance є похідним значенням, що підтримується тригерами.
+Атрибути: user_id (integer, PK, FK → users(id), ON DELETE CASCADE); bio (varchar(2000)); balance (numeric(10,2), DEFAULT 0).
 
-| Стовпець | Тип | Обмеження |
-|---|---|---|
-| id | integer | PK, автоінкремент |
-| first_name | varchar(100) | NOT NULL |
-| last_name | varchar(100) | NOT NULL |
-| email | varchar(255) | NOT NULL, UNIQUE |
-| password_hash | text | NOT NULL |
-| role | varchar(20) | NOT NULL, CHECK (role IN ('Admin', 'Teacher', 'Student')) |
-| status | varchar(20) | NOT NULL, DEFAULT 'Active', CHECK (status IN ('Active', 'Suspended')) |
+*categories* — довідник тематичних категорій курсів. Назва категорії має обмеження UNIQUE.
+Атрибути: id (integer, PK, автоінкремент); name (varchar(60), NOT NULL, UNIQUE).
 
-Таблиця *teacher_profiles* (табл. 2.2) є розширенням для користувачів із роллю «Викладач».
+*courses* — навчальні курси, створені викладачами. Зовнішній ключ author_id посилається на teacher_profiles(user_id), а не на users(id), що структурно гарантує: автором курсу може бути лише користувач із профілем викладача. Видалення автора заборонено при наявності курсів (ON DELETE RESTRICT). Ціна обмежена знизу нулем. Статус та рівень складності контролюються обмеженнями CHECK.
+Атрибути: id (integer, PK, автоінкремент); author_id (integer, FK → teacher_profiles(user_id), ON DELETE RESTRICT); title (varchar(200), NOT NULL); description (text, NOT NULL); price (numeric(10,2), CHECK >= 0); level (varchar(20), NOT NULL, CHECK IN ('Beginner', 'Intermediate', 'Advanced')); status (varchar(20), NOT NULL, CHECK IN ('Draft', 'Published')); created_at (timestamp, DEFAULT now()).
 
-Таблиця 2.2.
-Структура таблиці teacher_profiles
+*course_categories* — проміжна таблиця для зв'язку M:N між курсами та категоріями. Композитний первинний ключ унеможливлює повторне призначення категорії до курсу.
+Атрибути: courses_id (integer, PK (частина), FK → courses(id)); categories_id (integer, PK (частина), FK → categories(id)).
 
-| Стовпець | Тип | Обмеження |
-|---|---|---|
-| user_id | integer | PK, FK → users(id), ON DELETE CASCADE |
-| bio | varchar(2000) | |
-| balance | numeric(10,2) | DEFAULT 0 |
+*lessons* — уроки в межах курсу. Комбінація (course_id, order_number) має обмеження UNIQUE для гарантування унікальності порядку уроків у межах курсу. При видаленні курсу уроки видаляються каскадно (ON DELETE CASCADE).
+Атрибути: id (integer, PK, автоінкремент); course_id (integer, FK → courses(id), ON DELETE CASCADE); order_number (integer, UNIQUE разом із course_id); title (varchar(200), NOT NULL); content (text, NOT NULL).
 
-Таблиця *categories* (табл. 2.3) є довідником тематичних категорій курсів.
+*enrollments* — записи студентів на курси. Комбінація (student_id, course_id) має обмеження UNIQUE — студент може записатись на курс лише один раз. Прогрес обмежений діапазоном 0–100. Видалення пов'язаного студента або курсу заборонено при наявності записів (ON DELETE RESTRICT).
+Атрибути: id (integer, PK, автоінкремент); student_id (integer, FK → users(id), ON DELETE RESTRICT); course_id (integer, FK → courses(id), ON DELETE RESTRICT); enrolled_at (timestamp, DEFAULT now()); progress (integer, DEFAULT 0, CHECK BETWEEN 0 AND 100).
 
-Таблиця 2.3.
-Структура таблиці categories
+*lesson_progress* — відстеження завершення окремих уроків. Композитний первинний ключ (enrollment_id, lesson_id) гарантує, що кожен урок може бути позначений як завершений лише один раз у межах одного запису. При видаленні запису прогрес видаляється каскадно; видалення уроку при наявності записів прогресу заборонено.
+Атрибути: enrollment_id (integer, PK (частина), FK → enrollments(id), ON DELETE CASCADE); lesson_id (integer, PK (частина), FK → lessons(id), ON DELETE RESTRICT); completed_at (timestamp, DEFAULT now()).
 
-| Стовпець | Тип | Обмеження |
-|---|---|---|
-| id | integer | PK, автоінкремент |
-| name | varchar(60) | NOT NULL, UNIQUE |
+*reviews* — відгуки студентів на курси. Первинний ключ enrollment_id одночасно є зовнішнім ключем до таблиці enrollments, що забезпечує два структурних обмеження: один відгук на один запис та неможливість залишити відгук без попереднього запису на курс. При видаленні запису відгук видаляється каскадно.
+Атрибути: enrollment_id (integer, PK, FK → enrollments(id), ON DELETE CASCADE); grade (integer, CHECK BETWEEN 1 AND 5); comment (varchar(2000)); created_at (timestamp, DEFAULT now()).
 
-Таблиця *courses* (табл. 2.4) зберігає навчальні курси, створені викладачами. Зовнішній ключ author_id посилається на teacher_profiles(user_id), а не на users(id), що структурно гарантує: автором курсу може бути лише користувач із профілем викладача.
+*payments* — фінансові транзакції при записі на курс. Видалення пов'язаного студента або курсу заборонено (ON DELETE RESTRICT). Сума обмежена знизу нулем, статус — обмеженням CHECK.
+Атрибути: id (integer, PK, автоінкремент); student_id (integer, FK → users(id), ON DELETE RESTRICT); course_id (integer, FK → courses(id), ON DELETE RESTRICT); amount (numeric(10,2), CHECK >= 0); status (varchar(20), NOT NULL, CHECK IN ('Completed', 'Refunded')); created_at (timestamp, DEFAULT now()).
 
-Таблиця 2.4.
-Структура таблиці courses
-
-| Стовпець | Тип | Обмеження |
-|---|---|---|
-| id | integer | PK, автоінкремент |
-| author_id | integer | FK → teacher_profiles(user_id), ON DELETE RESTRICT |
-| title | varchar(200) | NOT NULL |
-| description | text | NOT NULL |
-| price | numeric(10,2) | CHECK (price >= 0) |
-| level | varchar(20) | NOT NULL, CHECK (level IN ('Beginner', 'Intermediate', 'Advanced')) |
-| status | varchar(20) | NOT NULL, CHECK (status IN ('Draft', 'Published')) |
-| created_at | timestamp | DEFAULT now() |
-
-Таблиця *course_categories* (табл. 2.5) є проміжною таблицею для зв'язку M:N між курсами та категоріями.
-
-Таблиця 2.5.
-Структура таблиці course_categories
-
-| Стовпець | Тип | Обмеження |
-|---|---|---|
-| courses_id | integer | PK (частина), FK → courses(id) |
-| categories_id | integer | PK (частина), FK → categories(id) |
-
-Таблиця *lessons* (табл. 2.6) зберігає уроки в межах курсу.
-
-Таблиця 2.6.
-Структура таблиці lessons
-
-| Стовпець | Тип | Обмеження |
-|---|---|---|
-| id | integer | PK, автоінкремент |
-| course_id | integer | FK → courses(id), ON DELETE CASCADE |
-| order_number | integer | UNIQUE разом із course_id |
-| title | varchar(200) | NOT NULL |
-| content | text | NOT NULL |
-
-Таблиця *enrollments* (табл. 2.7) зберігає записи студентів на курси. Комбінація (student_id, course_id) має обмеження UNIQUE — студент може записатись на курс лише один раз.
-
-Таблиця 2.7.
-Структура таблиці enrollments
-
-| Стовпець | Тип | Обмеження |
-|---|---|---|
-| id | integer | PK, автоінкремент |
-| student_id | integer | FK → users(id), ON DELETE RESTRICT |
-| course_id | integer | FK → courses(id), ON DELETE RESTRICT |
-| enrolled_at | timestamp | DEFAULT now() |
-| progress | integer | DEFAULT 0, CHECK (progress BETWEEN 0 AND 100) |
-
-Таблиця *lesson_progress* (табл. 2.8) відстежує завершення окремих уроків. Композитний первинний ключ (enrollment_id, lesson_id) гарантує, що кожен урок може бути позначений як завершений лише один раз у межах одного запису.
-
-Таблиця 2.8.
-Структура таблиці lesson_progress
-
-| Стовпець | Тип | Обмеження |
-|---|---|---|
-| enrollment_id | integer | PK (частина), FK → enrollments(id), ON DELETE CASCADE |
-| lesson_id | integer | PK (частина), FK → lessons(id), ON DELETE RESTRICT |
-| completed_at | timestamp | DEFAULT now() |
-
-Таблиця *reviews* (табл. 2.9) зберігає відгуки студентів на курси. Первинний ключ enrollment_id одночасно є зовнішнім ключем до таблиці enrollments, що забезпечує два обмеження: один відгук на один запис та неможливість залишити відгук без попереднього запису на курс.
-
-Таблиця 2.9.
-Структура таблиці reviews
-
-| Стовпець | Тип | Обмеження |
-|---|---|---|
-| enrollment_id | integer | PK, FK → enrollments(id), ON DELETE CASCADE |
-| grade | integer | CHECK (grade BETWEEN 1 AND 5) |
-| comment | varchar(2000) | |
-| created_at | timestamp | DEFAULT now() |
-
-Таблиця *payments* (табл. 2.10) зберігає фінансові транзакції при записі на курс.
-
-Таблиця 2.10.
-Структура таблиці payments
-
-| Стовпець | Тип | Обмеження |
-|---|---|---|
-| id | integer | PK, автоінкремент |
-| student_id | integer | FK → users(id), ON DELETE RESTRICT |
-| course_id | integer | FK → courses(id), ON DELETE RESTRICT |
-| amount | numeric(10,2) | CHECK (amount >= 0) |
-| status | varchar(20) | NOT NULL, CHECK (status IN ('Completed', 'Refunded')) |
-| created_at | timestamp | DEFAULT now() |
-
-Таблиця *payouts* (табл. 2.11) зберігає запити викладачів на виплату коштів.
-
-Таблиця 2.11.
-Структура таблиці payouts
-
-| Стовпець | Тип | Обмеження |
-|---|---|---|
-| id | integer | PK, автоінкремент |
-| teacher_id | integer | FK → teacher_profiles(user_id), ON DELETE RESTRICT |
-| amount | numeric(10,2) | CHECK (amount >= 0) |
-| status | varchar(20) | NOT NULL, CHECK (status IN ('Pending', 'Approved', 'Rejected', 'Paid')) |
-| requested_at | timestamp | DEFAULT now() |
+*payouts* — запити викладачів на виплату коштів. Статус відображає автомат станів: Pending → Approved → Paid або Pending → Rejected. Видалення профілю викладача заборонено при наявності виплат (ON DELETE RESTRICT).
+Атрибути: id (integer, PK, автоінкремент); teacher_id (integer, FK → teacher_profiles(user_id), ON DELETE RESTRICT); amount (numeric(10,2), CHECK >= 0); status (varchar(20), NOT NULL, CHECK IN ('Pending', 'Approved', 'Rejected', 'Paid')); requested_at (timestamp, DEFAULT now()).
 
 ### Нормалізація
 
@@ -219,20 +114,13 @@
 
 ### Індекси
 
-Окрім неявних індексів, створених для первинних ключів та обмежень UNIQUE, визначено 5 явних індексів для оптимізації типових запитів (табл. 2.12).
+Окрім неявних індексів, створених для первинних ключів та обмежень UNIQUE, визначено 5 явних індексів для оптимізації типових запитів. Кожен індекс відповідає стовпцю зовнішнього ключа, за яким часто виконуються запити фільтрації через інтерфейс користувача:
 
-Таблиця 2.12.
-Явні індекси бази даних
-
-| Індекс | Таблиця, стовпець | Обґрунтування |
-|---|---|---|
-| idx_courses_author_id | courses(author_id) | Вибірка курсів конкретного викладача |
-| idx_enrollments_student_id | enrollments(student_id) | Вибірка записів конкретного студента |
-| idx_enrollments_course_id | enrollments(course_id) | Аналітика курсу (підрахунок студентів) |
-| idx_payments_course_id | payments(course_id) | Аналітика курсу (обчислення доходу) |
-| idx_payouts_teacher_id | payouts(teacher_id) | Перегляд виплат конкретного викладача |
-
-Кожен індекс відповідає стовпцю зовнішнього ключа, за яким часто виконуються запити фільтрації через інтерфейс користувача.
+- *idx_courses_author_id* — courses(author_id): вибірка курсів конкретного викладача;
+- *idx_enrollments_student_id* — enrollments(student_id): вибірка записів конкретного студента;
+- *idx_enrollments_course_id* — enrollments(course_id): аналітика курсу (підрахунок студентів);
+- *idx_payments_course_id* — payments(course_id): аналітика курсу (обчислення доходу);
+- *idx_payouts_teacher_id* — payouts(teacher_id): перегляд виплат конкретного викладача.
 
 ## 2.4. Реалізація процедур бізнес-логіки
 
