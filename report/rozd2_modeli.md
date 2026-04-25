@@ -72,37 +72,87 @@
 Схема бази даних складається з 11 таблиць. Усі назви таблиць та стовпців використовують формат snake_case, що забезпечується бібліотекою EFCore.NamingConventions. Нижче подано опис кожної таблиці.
 
 *users* — таблиця облікових записів усіх користувачів системи. Роль та статус зберігаються як текстові стовпці з обмеженнями CHECK на допустимі значення, що спрощує еволюцію схеми порівняно з типами ENUM. Електронна пошта має обмеження UNIQUE для запобігання дублікатів.
-Атрибути: id (integer, PK, автоінкремент); first_name (varchar(100), NOT NULL); last_name (varchar(100), NOT NULL); email (varchar(255), NOT NULL, UNIQUE); password_hash (text, NOT NULL); role (varchar(20), NOT NULL, CHECK IN ('Admin', 'Teacher', 'Student')); status (varchar(20), NOT NULL, DEFAULT 'Active', CHECK IN ('Active', 'Suspended')).
+Атрибути:
+- id (integer, PK, автоінкремент) — унікальний ідентифікатор користувача;
+- first_name (varchar(100), NOT NULL) — ім'я користувача;
+- last_name (varchar(100), NOT NULL) — прізвище користувача;
+- email (varchar(255), NOT NULL, UNIQUE) — адреса електронної пошти, використовується для входу в систему;
+- password_hash (text, NOT NULL) — хеш пароля, створений алгоритмом PBKDF2;
+- role (varchar(20), NOT NULL, CHECK IN ('Admin', 'Teacher', 'Student')) — роль користувача в системі, визначає доступні функції;
+- status (varchar(20), NOT NULL, DEFAULT 'Active', CHECK IN ('Active', 'Suspended')) — статус облікового запису, призупинені користувачі не можуть увійти в систему.
 
 *teacher_profiles* — розширення для користувачів із роллю «Викладач». Зв'язок 1:1 із таблицею users через первинний ключ user_id, що одночасно є зовнішнім ключем. При видаленні користувача профіль видаляється каскадно (ON DELETE CASCADE). Поле balance є похідним значенням, що підтримується тригерами.
-Атрибути: user_id (integer, PK, FK → users(id), ON DELETE CASCADE); bio (varchar(2000)); balance (numeric(10,2), DEFAULT 0).
+Атрибути:
+- user_id (integer, PK, FK → users(id), ON DELETE CASCADE) — ідентифікатор користувача-викладача;
+- bio (varchar(2000)) — текстова біографія викладача, відображається на публічному профілі;
+- balance (numeric(10,2), DEFAULT 0) — поточний баланс нарахованих коштів, автоматично перераховується тригерами при зміні оплат або виплат.
 
 *categories* — довідник тематичних категорій курсів. Назва категорії має обмеження UNIQUE.
-Атрибути: id (integer, PK, автоінкремент); name (varchar(60), NOT NULL, UNIQUE).
+Атрибути:
+- id (integer, PK, автоінкремент) — унікальний ідентифікатор категорії;
+- name (varchar(60), NOT NULL, UNIQUE) — назва категорії, наприклад «Web Development» або «Business Finance».
 
 *courses* — навчальні курси, створені викладачами. Зовнішній ключ author_id посилається на teacher_profiles(user_id), а не на users(id), що структурно гарантує: автором курсу може бути лише користувач із профілем викладача. Видалення автора заборонено при наявності курсів (ON DELETE RESTRICT). Ціна обмежена знизу нулем. Статус та рівень складності контролюються обмеженнями CHECK.
-Атрибути: id (integer, PK, автоінкремент); author_id (integer, FK → teacher_profiles(user_id), ON DELETE RESTRICT); title (varchar(200), NOT NULL); description (text, NOT NULL); price (numeric(10,2), CHECK >= 0); level (varchar(20), NOT NULL, CHECK IN ('Beginner', 'Intermediate', 'Advanced')); status (varchar(20), NOT NULL, CHECK IN ('Draft', 'Published')); created_at (timestamp, DEFAULT now()).
+Атрибути:
+- id (integer, PK, автоінкремент) — унікальний ідентифікатор курсу;
+- author_id (integer, FK → teacher_profiles(user_id), ON DELETE RESTRICT) — ідентифікатор викладача-автора курсу;
+- title (varchar(200), NOT NULL) — назва курсу, відображається в каталозі та на сторінці деталей;
+- description (text, NOT NULL) — розгорнутий опис курсу;
+- price (numeric(10,2), CHECK >= 0) — вартість курсу в доларах, 0 для безкоштовних курсів;
+- level (varchar(20), NOT NULL, CHECK IN ('Beginner', 'Intermediate', 'Advanced')) — рівень складності курсу;
+- status (varchar(20), NOT NULL, CHECK IN ('Draft', 'Published')) — стан публікації: чернетка або опублікований;
+- created_at (timestamp, DEFAULT now()) — дата та час створення курсу.
 
 *course_categories* — проміжна таблиця для зв'язку M:N між курсами та категоріями. Композитний первинний ключ унеможливлює повторне призначення категорії до курсу.
-Атрибути: courses_id (integer, PK (частина), FK → courses(id)); categories_id (integer, PK (частина), FK → categories(id)).
+Атрибути:
+- courses_id (integer, PK (частина), FK → courses(id)) — ідентифікатор курсу;
+- categories_id (integer, PK (частина), FK → categories(id)) — ідентифікатор категорії.
 
 *lessons* — уроки в межах курсу. Комбінація (course_id, order_number) має обмеження UNIQUE для гарантування унікальності порядку уроків у межах курсу. При видаленні курсу уроки видаляються каскадно (ON DELETE CASCADE).
-Атрибути: id (integer, PK, автоінкремент); course_id (integer, FK → courses(id), ON DELETE CASCADE); order_number (integer, UNIQUE разом із course_id); title (varchar(200), NOT NULL); content (text, NOT NULL).
+Атрибути:
+- id (integer, PK, автоінкремент) — унікальний ідентифікатор уроку;
+- course_id (integer, FK → courses(id), ON DELETE CASCADE) — ідентифікатор курсу, до якого належить урок;
+- order_number (integer, UNIQUE разом із course_id) — порядковий номер уроку в межах курсу, визначає послідовність перегляду;
+- title (varchar(200), NOT NULL) — назва уроку;
+- content (text, NOT NULL) — текстовий навчальний матеріал уроку.
 
 *enrollments* — записи студентів на курси. Комбінація (student_id, course_id) має обмеження UNIQUE — студент може записатись на курс лише один раз. Прогрес обмежений діапазоном 0–100. Видалення пов'язаного студента або курсу заборонено при наявності записів (ON DELETE RESTRICT).
-Атрибути: id (integer, PK, автоінкремент); student_id (integer, FK → users(id), ON DELETE RESTRICT); course_id (integer, FK → courses(id), ON DELETE RESTRICT); enrolled_at (timestamp, DEFAULT now()); progress (integer, DEFAULT 0, CHECK BETWEEN 0 AND 100).
+Атрибути:
+- id (integer, PK, автоінкремент) — унікальний ідентифікатор запису;
+- student_id (integer, FK → users(id), ON DELETE RESTRICT) — ідентифікатор студента;
+- course_id (integer, FK → courses(id), ON DELETE RESTRICT) — ідентифікатор курсу;
+- enrolled_at (timestamp, DEFAULT now()) — дата та час запису на курс;
+- progress (integer, DEFAULT 0, CHECK BETWEEN 0 AND 100) — відсоток пройденого матеріалу, автоматично перераховується тригером при зміні таблиці lesson_progress.
 
 *lesson_progress* — відстеження завершення окремих уроків. Композитний первинний ключ (enrollment_id, lesson_id) гарантує, що кожен урок може бути позначений як завершений лише один раз у межах одного запису. При видаленні запису прогрес видаляється каскадно; видалення уроку при наявності записів прогресу заборонено.
-Атрибути: enrollment_id (integer, PK (частина), FK → enrollments(id), ON DELETE CASCADE); lesson_id (integer, PK (частина), FK → lessons(id), ON DELETE RESTRICT); completed_at (timestamp, DEFAULT now()).
+Атрибути:
+- enrollment_id (integer, PK (частина), FK → enrollments(id), ON DELETE CASCADE) — ідентифікатор запису на курс;
+- lesson_id (integer, PK (частина), FK → lessons(id), ON DELETE RESTRICT) — ідентифікатор завершеного уроку;
+- completed_at (timestamp, DEFAULT now()) — дата та час позначення уроку як завершеного.
 
 *reviews* — відгуки студентів на курси. Первинний ключ enrollment_id одночасно є зовнішнім ключем до таблиці enrollments, що забезпечує два структурних обмеження: один відгук на один запис та неможливість залишити відгук без попереднього запису на курс. При видаленні запису відгук видаляється каскадно.
-Атрибути: enrollment_id (integer, PK, FK → enrollments(id), ON DELETE CASCADE); grade (integer, CHECK BETWEEN 1 AND 5); comment (varchar(2000)); created_at (timestamp, DEFAULT now()).
+Атрибути:
+- enrollment_id (integer, PK, FK → enrollments(id), ON DELETE CASCADE) — ідентифікатор запису на курс, що одночасно є первинним ключем відгуку;
+- grade (integer, CHECK BETWEEN 1 AND 5) — числова оцінка курсу від 1 до 5;
+- comment (varchar(2000)) — текстовий коментар студента;
+- created_at (timestamp, DEFAULT now()) — дата та час створення відгуку.
 
 *payments* — фінансові транзакції при записі на курс. Видалення пов'язаного студента або курсу заборонено (ON DELETE RESTRICT). Сума обмежена знизу нулем, статус — обмеженням CHECK.
-Атрибути: id (integer, PK, автоінкремент); student_id (integer, FK → users(id), ON DELETE RESTRICT); course_id (integer, FK → courses(id), ON DELETE RESTRICT); amount (numeric(10,2), CHECK >= 0); status (varchar(20), NOT NULL, CHECK IN ('Completed', 'Refunded')); created_at (timestamp, DEFAULT now()).
+Атрибути:
+- id (integer, PK, автоінкремент) — унікальний ідентифікатор оплати;
+- student_id (integer, FK → users(id), ON DELETE RESTRICT) — ідентифікатор студента, що здійснив оплату;
+- course_id (integer, FK → courses(id), ON DELETE RESTRICT) — ідентифікатор оплаченого курсу;
+- amount (numeric(10,2), CHECK >= 0) — сума оплати в доларах;
+- status (varchar(20), NOT NULL, CHECK IN ('Completed', 'Refunded')) — статус транзакції: завершена або повернена;
+- created_at (timestamp, DEFAULT now()) — дата та час здійснення оплати.
 
 *payouts* — запити викладачів на виплату коштів. Статус відображає автомат станів: Pending → Approved → Paid або Pending → Rejected. Видалення профілю викладача заборонено при наявності виплат (ON DELETE RESTRICT).
-Атрибути: id (integer, PK, автоінкремент); teacher_id (integer, FK → teacher_profiles(user_id), ON DELETE RESTRICT); amount (numeric(10,2), CHECK >= 0); status (varchar(20), NOT NULL, CHECK IN ('Pending', 'Approved', 'Rejected', 'Paid')); requested_at (timestamp, DEFAULT now()).
+Атрибути:
+- id (integer, PK, автоінкремент) — унікальний ідентифікатор виплати;
+- teacher_id (integer, FK → teacher_profiles(user_id), ON DELETE RESTRICT) — ідентифікатор викладача, що подав запит;
+- amount (numeric(10,2), CHECK >= 0) — запитувана сума виплати в доларах;
+- status (varchar(20), NOT NULL, CHECK IN ('Pending', 'Approved', 'Rejected', 'Paid')) — поточний статус запиту на виплату;
+- requested_at (timestamp, DEFAULT now()) — дата та час подання запиту.
 
 ### Нормалізація
 
